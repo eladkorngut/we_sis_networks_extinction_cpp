@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include <tuple>
 #include <deque>
-
+#include <tr1/tuple>
 
 
 // Declaration of functions
@@ -396,7 +396,7 @@ void GillespieMC(int steps_c,std::list<int> &num_inf,std::list<int>::iterator &i
     double r1,r2,s_m_sum;
 
     while (0<steps_c){
-        //The initialized the iterators of the different list
+        //The initialized iterators of the different list
         temp_count_steps++;
         temp_count_num_inf=0;
 
@@ -615,8 +615,8 @@ void resample(int steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_n
               std::list<int> &SI,std::list<int>::iterator &it_SI,std::list<bool> &skip,std::list<bool>::iterator &it_skip,
               double Alpha,double tau,int k_max,double death,double Beta,std::vector<int> &degrees_in,std::vector<int> &degrees_out,
               std::vector<std::vector<int>> &Adjlist_in,std::vector<std::vector<int>> &Adjlist_out,std::list<double> &weights,std::list<double>::iterator &it_weights,
-              std::vector<double> &Nlimits){
-    std::vector<double>::iterator it_bin;
+              std::deque<double> &Nlimits){
+    std::deque<double>::iterator it_bin;
     int pos;
     it_num_inf=num_inf.begin();
     it_avec_sum=avec_sum.begin();
@@ -645,9 +645,12 @@ void resample(int steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_n
             std::list< std::vector<int>>::iterator,std::list< std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,
             std::list<std::vector<int>>::iterator,std::list< std::vector<std::vector<int>>>::iterator,std::list<int>::iterator>> bin;
 //    auto it_temp=bin.end();
+//    std::vector<std::deque<  std::tuple<std::list<int>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<std::vector<int>>::iterator,
+//            std::list< std::vector<int>>::iterator,std::list< std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,
+//            std::list<std::vector<int>>::iterator,std::list< std::vector<std::vector<int>>>::iterator,std::list<int>::iterator>>> consmall(Nlimits.size()),bins(Nlimits.size());
     std::vector<std::deque<  std::tuple<std::list<int>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<std::vector<int>>::iterator,
             std::list< std::vector<int>>::iterator,std::list< std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,
-            std::list<std::vector<int>>::iterator,std::list< std::vector<std::vector<int>>>::iterator,std::list<int>::iterator>>> consmall(Nlimits.size()),bins(Nlimits.size());
+            std::list<std::vector<int>>::iterator,std::list< std::vector<std::vector<int>>>::iterator,std::list<int>::iterator>>> consmall(Nlimits.size()),bins(num_inf.size());
     std::deque<  std::tuple<std::list<int>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<std::vector<int>>::iterator,
             std::list< std::vector<int>>::iterator,std::list< std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,
             std::list<std::vector<int>>::iterator,std::list< std::vector<std::vector<int>>>::iterator,std::list<int>::iterator>>::iterator it_path_to_unify,it_sim_unified;
@@ -668,7 +671,7 @@ void resample(int steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_n
         } else if (*std::get<1>(bins[pos].back())<(*it_weights)){
             bins[pos].push_back(sim_data);
         } else {
-            for (auto it_we_r = bins[pos].begin(); it_we_r != bins[pos].end(); ++it_weights){
+            for (auto it_we_r = bins[pos].begin(); it_we_r != bins[pos].end(); ++it_we_r){
                 if (*(std::get<1>(*it_we_r))<(*it_weights) && *(std::get<1>(*std::next(it_we_r)))>=(*it_weights) ){
                     bins[pos].insert(it_we_r,sim_data);
                     break;
@@ -788,7 +791,10 @@ int main() {
     inital_networks_stat(N,inital_inf_percent,sims,num_inf,infected_node,infected_neighbors_in,infected_neighbors_out,sigma,
                          degrees_in,degrees_out,Adjlist_in,Adjlist_out,positions,susceptible_nodes,SI,s_m,k_max);
     int temp_count_steps(0),temp_count_num_inf(0);
-    std::vector<double> death_vec,Nlimits={N+1.0,mf_solution,0};
+    std::vector<double> death_vec;
+//    std::deque<double> Nlimits={N+1.0,mf_solution,0};
+    std::deque<double> Nlimits={0,mf_solution,N+1.0};
+
     double n_min = mf_solution,n_min_new;
     std::list<int>::iterator it_min_new;
     int Bins;
@@ -804,11 +810,16 @@ int main() {
         it_min_new = std::partition(num_inf.begin(),num_inf.end(),[&](int n) {
             return n < *std::next(num_inf.begin(),new_trajectory_bin);}); //The purpose of this line is to find the minimal number of infected out of all simulations, up to new_trajectory_bin
         n_min_new = *std::next(it_min_new, new_trajectory_bin-1);
-        if (n_min_new<n_min-jump && Nlimits[Nlimits.size()-2]>jump){
+        if (n_min_new<n_min-jump && Nlimits[1]>jump){
             n_min=n_min_new;
-            Nlimits.push_back(Nlimits[Nlimits.size()-1]);
-            Nlimits[Nlimits.size()-2]=n_min;
+            Nlimits.push_front(Nlimits[0]);
+            Nlimits[1]=n_min;
         }
+//        if (n_min_new<n_min-jump && Nlimits[Nlimits.size()-2]>jump){
+//            n_min=n_min_new;
+//            Nlimits.push_back(Nlimits[Nlimits.size()-1]);
+//            Nlimits[Nlimits.size()-2]=n_min;
+//        }
 
         // Resample the paths so highly weighted simulations are split and low weighted simulations are unified
         resample(steps_c,num_inf,it_num_inf,it_avec_sum,avec_sum,it_t,t,infected_node,it_infected_node,infected_neighbors_in,it_infected_neighbors_in,
