@@ -811,6 +811,25 @@ void resample(int& steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_
         }
         steps_c= steps_c+addition_step_c;
     }
+int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
+    int n_min_new=num_inf.size();
+    int count_smaller =0;
+    for(auto outer_it=num_inf.begin();outer_it!=num_inf.end();++outer_it){
+        count_smaller =0;
+        for (auto inner_it = num_inf.begin(); inner_it != num_inf.end(); ++inner_it) {
+            if (*inner_it < *outer_it) {
+                count_smaller++;
+            }
+        }
+        if (count_smaller == new_trajectory_bin) {
+            n_min_new = (*outer_it);
+            break;
+        }
+    }
+    return n_min_new;
+}
+
+
 
 int main() {
     int m_in,m_out,node;  //k_max maximal degree, N number of nodes, sims number of simulations
@@ -869,9 +888,10 @@ int main() {
         death_vec.push_back(death);
 
         // Add to Nlimits a new bin if there is enough flux going to a lower infected level
-        it_min_new = std::partition(num_inf.begin(),num_inf.end(),[&](int n) {
-            return n < *std::next(num_inf.begin(),new_trajectory_bin);}); //The purpose of this line is to find the minimal number of infected out of all simulations, up to new_trajectory_bin
-        n_min_new = *std::next(it_min_new, new_trajectory_bin-1);
+        n_min_new=find_new_min(num_inf,new_trajectory_bin);
+//        it_min_new = std::partition(num_inf.begin(),num_inf.end(),[&](int n) {
+//            return n < *std::next(num_inf.begin(),new_trajectory_bin);}); //The purpose of this line is to find the minimal number of infected out of all simulations, up to new_trajectory_bin
+//        n_min_new = *std::next(it_min_new, new_trajectory_bin-1);
         if (n_min_new<n_min-jump && Nlimits[1]>jump){
             n_min=n_min_new;
             Nlimits.push_front(Nlimits[0]);
