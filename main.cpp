@@ -26,17 +26,226 @@
 // Declaration of functions
 void remove_infected_node(int node,std::vector<int>& infected_node,std::vector<int> &positions);
 void add_susceptible_node(int node,int m,std::vector<std::vector<int>>& susceptible_node,std::vector<int>& positions);
-void decrement_susc_neighbs(int k_in,int k_out,std::vector<int>& neighbs_in,std::vector<int>& neighbs_out,
-                            std::vector<std::vector<int>>& susceptible_nodes,std::vector<int>& infected_neighbors_in,
-                            std::vector<int>& infected_neighbors_out,std::vector<int>& s_m,std::vector<int>& positions,std::vector<int>& sigma);
-//void increment_susc_neighbs(int k_in,int k_out,std::vector<int>& neighbs_in,std::vector<int>& neighbs_out,std::vector<std::vector<int>>& susceptible_nodes,
-//                            std::vector<int>& infected_neighbs_int,std::vector<int>& infected_neighbs_out,std::vector<int>& s_m,std::vector<int>& positions,std::vector<int>& sigma);
+void decrement_susc_neighbs(int k_in,int k_out,std::vector<int> &neighbs_in,std::vector<int> &neighbs_out,
+                            std::vector<std::vector<int>> &net_susceptible_nodes,std::vector<int> &infected_neighbors_in,
+                            std::vector<int> &infected_neighbors_out,std::vector<int> &s_m,std::vector<int> &positions
+                            ,std::vector<int> &sigma,std::vector<int> &inf_neigh);
+void increment_susc_neighbs(int k_in,int k_out,std::vector<int> &neighbs_in,std::vector<int> &neighbs_out,
+                            std::vector<std::vector<int>> &net_suceptible_nodes,std::vector<int> &infected_neighbors_in,
+                            std::vector<int> &infected_neighbors_out,std::vector<int> &s_m,std::vector<int> &positions,
+                            std::vector<int> &sigma);
 void remove_susceptible_node(int node,int k,std::vector<std::vector<int>>& susceptible_nodes,std::vector<int>& positions);
 void add_infected_node(int node,std::vector<int>& infected_node,std::vector<int>& positions);
 void read_in_neighborslist(int N,std::string& filename,std::vector<std::vector<int>>& Adjlist,std::vector<int>& degree,std::fstream& Adjfile);
 void read_parameters(std::string& filename,std::fstream& parameters_file,int N,int sims,int it,int k,double x,double lam,double Alpha,double Beta,int network_number,
                      double mf_solution,int new_trajectory_bin,int k_max);
 
+
+
+struct network_topology{
+public:
+    double Alpha,Beta;
+    int k_max;
+    std::vector<int> degree_in,degree_out;
+    std::vector<std::vector<int>> Adjlist_in,Adjlist_out;
+
+    network_topology(double Alpha,double Beta,int k_max,std::vector<int> &degree_in,std::vector<int> &degree_out,
+                     std::vector<std::vector<int>> &Adjlist_in,std::vector<std::vector<int>> &Adjlist_out): Alpha(Alpha),
+                     Beta(Beta),k_max(k_max),degree_in(degree_in),degree_out(degree_out),Adjlist_in(Adjlist_in),Adjlist_out(Adjlist_out){}
+    void decrement_susc_neighbs(int k_in,int k_out,std::vector<int> &neighbs_in,std::vector<int> &neighbs_out,
+                                std::vector<std::vector<int>> &net_susceptible_nodes,std::vector<int> &infected_neighbors_in,
+                                std::vector<int> &infected_neighbors_out,std::vector<int> &s_m,std::vector<int> &positions
+            ,std::vector<int> &sigma,std::vector<int> &inf_neigh){
+        int neighb,m2;
+        for (int j=0;j<k_out;j++){
+            // Change neighbours from s_m class to s_m{m-1} class. need to be for the ingoing neighbours
+            neighb = neighbs_out[j];
+            infected_neighbors_in[neighbs_out[j]]--;
+            if (sigma[neighb]==0){
+                m2 = infected_neighbors_in[neighb];
+                remove_susceptible_node(neighb,m2+1,net_susceptible_nodes,positions);
+                s_m[m2+1]--;
+                add_susceptible_node(neighb,m2,net_susceptible_nodes,positions);
+                s_m[m2]++;
+            }
+
+        }
+        for (int j=0;j<k_in;j++){
+            infected_neighbors_out[neighbs_in[j]]--; // Each neighbor of recovered node has one less infected neighbor
+        }
+    }
+
+};
+
+struct networks_dynamics{
+public:
+    std::list<int> num_inf;
+    std::list<double> weights;
+    std::list<double> avec_sum;
+    std::list<double> t;
+    std::list<std::vector<int>> infected_node,infected_neighbors_in,infected_neighbors_out,sigma,s_m,positions;
+    std::list<std::vector<std::vector<int>>> susceptible_nodes;
+    std::list<int> SI;
+
+
+    // Constructor to initialize the member variables
+    networks_dynamics(std::list<int> &num_inf,std::list<double> &weights,std::list<double> &avec_sum,
+             std::list<double> &t,std::list<std::vector<int>> &infected_node,std::list<std::vector<int>> &infected_neighbors_in,
+             std::list<std::vector<int>> &infected_neighbors_out,std::list<std::vector<int>> &sigma,std::list<std::vector<int>> &s_m,
+             std::list<std::vector<int>> &positions,std::list<std::vector<std::vector<int>>> &susceptible_nodes,std::list<int> &SI):
+             num_inf(num_inf),weights(weights),avec_sum(avec_sum),infected_node(infected_node),infected_neighbors_in(infected_neighbors_in),infected_neighbors_out(infected_neighbors_out),
+             sigma(sigma),positions(positions),susceptible_nodes(susceptible_nodes),SI(SI),s_m(s_m),t(t){}
+
+};
+
+
+struct simulation_data{
+public:
+    std::list<int>::iterator i_num_inf,i_SI;
+    std::list<double>::iterator i_weights,i_avec_sum,i_t;
+    std::list<std::vector<int>>::iterator i_infected_node,i_infected_neighbors_in,i_infected_neighbors_out,i_sigma,i_s_m,i_positions;
+    std::list<std::vector<std::vector<int>>>::iterator i_susceptible_nodes;
+
+    // Constructor to initialize the member variables
+    simulation_data(
+            // The types are: num_inf,weights, avec_sum,t,infected_node,infected_neighbors_in,infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI
+            std::list<int>::iterator i_num_inf,
+            std::list<double>::iterator i_weights,
+            std::list<double>::iterator i_avec_sum,
+            std::list<double>::iterator i_t,
+            std::list<std::vector<int>>::iterator i_infected_node,
+            std::list<std::vector<int>>::iterator i_infected_neighbors_in,
+            std::list<std::vector<int>>::iterator i_infected_neighbors_out,
+            std::list<std::vector<int>>::iterator i_sigma,
+            std::list<std::vector<int>>::iterator i_s_m,
+            std::list<std::vector<int>>::iterator i_positions,
+            std::list<std::vector<std::vector<int>>>::iterator i_susceptible_nodes,
+            std::list<int>::iterator i_SI
+    ) : i_num_inf(i_num_inf), i_weights(i_weights), i_avec_sum(i_avec_sum), i_t(i_t), i_infected_node(i_infected_node), i_infected_neighbors_in(i_infected_neighbors_in)
+            , i_infected_neighbors_out(i_infected_neighbors_out), i_sigma(i_sigma), i_s_m(i_s_m), i_positions(i_positions), i_susceptible_nodes(i_susceptible_nodes), i_SI(i_SI) {}
+    simulation_data(
+            // The types are: num_inf,weights, avec_sum,t,infected_node,infected_neighbors_in,infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI
+            std::list<int> &num_inf,
+            std::list<double> &weights,
+            std::list<double> &avec_sum,
+            std::list<double> &t,
+            std::list<std::vector<int>> &infected_node,
+            std::list<std::vector<int>> &infected_neighbors_in,
+            std::list<std::vector<int>> &infected_neighbors_out,
+            std::list<std::vector<int>> &sigma,
+            std::list<std::vector<int>> &s_m,
+            std::list<std::vector<int>> &positions,
+            std::list<std::vector<std::vector<int>>> &susceptible_nodes,
+            std::list<int> &SI
+    ) : i_num_inf(num_inf.begin()), i_weights(weights.begin()), i_avec_sum(avec_sum.begin()), i_t(t.begin()), i_infected_node(infected_node.begin()), i_infected_neighbors_in(infected_neighbors_in.begin())
+            , i_infected_neighbors_out(infected_neighbors_out.begin()), i_sigma(sigma.begin()), i_s_m(s_m.begin()), i_positions(positions.begin()), i_susceptible_nodes(susceptible_nodes.begin()), i_SI(SI.begin()) {}
+
+    simulation_data (networks_dynamics& net_d):i_num_inf(net_d.num_inf.begin()),i_weights(net_d.weights.begin()),i_avec_sum(net_d.avec_sum.begin()),i_t(net_d.t.begin()),i_infected_node(net_d.infected_node.begin()),
+    i_infected_neighbors_in(net_d.infected_neighbors_in.begin()),i_infected_neighbors_out(net_d.infected_neighbors_out.begin()),i_sigma(net_d.sigma.begin()),i_s_m(net_d.s_m.begin()),i_positions(net_d.positions.begin()),
+    i_susceptible_nodes(net_d.susceptible_nodes.begin()),i_SI(net_d.SI.begin()){}
+
+
+    simulation_data& operator++(){
+        ++i_num_inf;
+        ++i_weights;
+        ++i_avec_sum;
+        ++i_t;
+        ++i_infected_node;
+        ++i_infected_neighbors_in;
+        ++i_infected_neighbors_out;
+        ++i_sigma;
+        ++i_s_m;
+        ++i_positions;
+        ++i_susceptible_nodes;
+        ++i_SI;
+        return *this;
+    }
+    bool end(networks_dynamics &net_d){
+        if (net_d.num_inf.end()==i_num_inf){
+            return true;
+        }
+        return false;
+    }
+
+    simulation_data erase_simulation(networks_dynamics &net_d){
+        this->i_num_inf = net_d.num_inf.erase(i_num_inf);
+        this->i_weights = net_d.weights.erase(i_weights);
+        this->i_avec_sum = net_d.avec_sum.erase(i_avec_sum);
+        this->i_t = net_d.t.erase(i_t);
+        this->i_infected_node = net_d.infected_node.erase(i_infected_node);
+        this->i_infected_neighbors_in = net_d.infected_neighbors_in.erase(i_infected_neighbors_in);
+        this->i_infected_neighbors_out = net_d.infected_neighbors_out.erase(i_infected_neighbors_out);
+        this->i_sigma = net_d.sigma.erase(i_sigma);
+        this->i_s_m = net_d.s_m.erase(i_s_m);
+        this->i_positions = net_d.positions.erase(i_positions);
+        this->i_susceptible_nodes = net_d.susceptible_nodes.erase(i_susceptible_nodes);
+        this->i_SI = net_d.SI.erase(i_SI);
+        return *this;
+    }
+
+    std::pair<double,simulation_data > gillespie(double tau,std::mt19937 &gen,std::uniform_real_distribution<double>& uniform_dist,
+                     networks_dynamics &net_d,network_topology &net_t){
+        double sim_time=0,r1,r2,s_m_sum=0;
+        int m_in,m_out,node;
+        while(*i_num_inf>0 && sim_time<tau){
+            r1 = uniform_dist(gen);
+            r2 = -std::log(uniform_dist(gen));
+            *i_avec_sum = (*i_num_inf)*net_t.Alpha+(*i_SI)*net_t.Beta;
+            sim_time+=r2/(*i_avec_sum);
+            //Pick a node, change its state and update the transition rates
+            if (r1<(*i_num_inf)*net_t.Alpha/(*i_avec_sum)) {
+                // Recover an infected node
+                std::uniform_int_distribution<int> node_dist(0,*i_num_inf-1);
+                node = (*i_infected_node)[node_dist(gen)]; //randomly choose infected node
+                m_in = (*i_infected_neighbors_in)[node]; //number of infected neighbors that infecting the node
+                m_out = (*i_infected_neighbors_out)[node]; //number of infected neighbors that the node infect
+                (*i_sigma)[node]=0;
+                (*i_num_inf)--;
+                //Remove node from infected list and add to susceptible list
+                remove_infected_node(node,*i_infected_node,*i_positions);
+                (*i_SI) = (*i_SI) + m_in + m_out - net_t.degree_out[node];
+                add_susceptible_node(node,m_in,*i_susceptible_nodes,*i_positions);
+                // Increment number of susceptible nodes with m infected nodes
+                (*i_s_m)[m_in]++;
+                decrement_susc_neighbs(net_t.degree_in[node],net_t.degree_out[node],net_t.Adjlist_in[node],net_t.Adjlist_out[node],*i_susceptible_nodes,
+                                       *i_infected_neighbors_in,*i_infected_neighbors_out,*i_s_m,*i_positions,*i_sigma,*i_infected_node);
+            }
+            else{
+                //Infected a susceptible node
+                // Pick an m class with probability proportional to the total number of SI links in that m class i.e. s_m[m]*m
+                r1= uniform_dist(gen)*(*i_SI);
+                s_m_sum = 0;
+                for (int m1=1;m1<=net_t.k_max;m1++){
+                    s_m_sum = s_m_sum + (*i_s_m)[m1]*m1;
+                    if (r1<=s_m_sum){
+                        // choose a node with m infected neighbours at random
+                        std::uniform_int_distribution<int> node_dist(0,(*i_s_m)[m1]-1);
+                        node = (*i_susceptible_nodes)[m1][node_dist(gen)];
+                        break;
+                    }
+                }
+                m_in = (*i_infected_neighbors_in)[node];
+                m_out = (*i_infected_neighbors_out)[node];
+                (*i_sigma)[node] = 1;
+                *i_num_inf = (*i_num_inf)+1;
+                // Remove the node from susceptible list and add to infected list
+                remove_susceptible_node(node,m_in,*i_susceptible_nodes,*i_positions);
+                add_infected_node(node,*i_infected_node,*i_positions);
+                //Decrement number of susceptible nodes
+                (*i_s_m)[m_in]--;
+                // change the neighbours to other lists and adjust s_m
+                (*i_SI) = (*i_SI) + net_t.degree_out[node] - m_in - m_out;
+                increment_susc_neighbs(net_t.degree_in[node],net_t.degree_out[node],net_t.Adjlist_in[node],net_t.Adjlist_out[node],
+                   *i_susceptible_nodes,*i_infected_neighbors_in,*i_infected_neighbors_out,*i_s_m,*i_positions,*i_sigma);
+            }
+        }
+        *i_t += sim_time;
+        if (*i_num_inf<=0){
+            return std::make_pair(*i_weights,erase_simulation(net_d));
+        }
+        return std::make_pair(0.0,*this);
+    }
+};
 
 // Start of auxiliary functions
 
@@ -108,7 +317,7 @@ void add_susceptible_node(int node,int m,std::vector<std::vector<int>>& suscepti
 void decrement_susc_neighbs(int k_in,int k_out,std::vector<int> &neighbs_in,std::vector<int> &neighbs_out,
                             std::vector<std::vector<int>> &net_susceptible_nodes,std::vector<int> &infected_neighbors_in,
                             std::vector<int> &infected_neighbors_out,std::vector<int> &s_m,std::vector<int> &positions
-                            ,std::vector<int> &sigma,int node,std::vector<int> &inf_neigh,int temp_step_count,int temp_t_count){
+                            ,std::vector<int> &sigma,std::vector<int> &inf_neigh){
     int neighb,m2;
     for (int j=0;j<k_out;j++){
         // Change neighbours from s_m class to s_m{m-1} class. need to be for the ingoing neighbours
@@ -132,9 +341,9 @@ void remove_susceptible_node(int node,int m, std::vector<std::vector<int>> &net_
 
     // Remove the node from the list by swapping the node with the last node in the list. This will not affect the
     // positioning of the other nodes once the position of the swapped last node is accounted for
-    int temp,temp2;
-    temp = net_susceptible_nodes[m].back();
-    temp2 = net_susceptible_nodes[m][positions[node]];
+//    int temp,temp2;
+//    temp = net_susceptible_nodes[m].back();
+//    temp2 = net_susceptible_nodes[m][positions[node]];
 //    net_susceptible_nodes[m][positions[node]] = temp;
     net_susceptible_nodes[m][positions[node]] = net_susceptible_nodes[m].back();  // Move last node in list to nodes position
     positions[net_susceptible_nodes[m].back()] = positions[node]; // account for this change in the position vector
@@ -257,29 +466,8 @@ void intalized_sus(int N,std::list< std::vector<std::vector<int>>> &susceptible_
         ++it_s_m;
         ++it_infected_neighbors_in;
     }
-
 }
 
-//void intalize_SI_connections(int N,std::list<int>& SI,std::list< std::vector<int>>& sigma,std::list< std::vector<int>>& infected_neighbors_in,
-//                             std::list< std::vector<int>>& infected_neighbors_out,std::vector<int>& degrees_out){
-//    std::list<int>::iterator it_SI=SI.begin();
-//    auto it_sigma=sigma.begin();
-//    auto it_infected_neighbors_in=infected_neighbors_in.begin();
-//    auto it_infected_neighbors_out=infected_neighbors_out.begin();
-//    while (it_sigma!=sigma.end()){
-//        for (int i=0;i<N;i++){
-//            if ((*it_sigma)[i]==0){
-//                (*it_SI)+=(*it_infected_neighbors_in)[i];
-//            }
-//            else{
-//                (*it_SI)+=degrees_out[i]-(*it_infected_neighbors_out)[i];
-//            }
-//        }
-//        ++it_SI;
-//        ++it_sigma;
-//        ++it_infected_neighbors_in;
-//    }
-//}
 void  intalize_SI_connections(std::list<int>& SI,std::list<std::vector<int>>& s_m,int k_max){
     std::list<std::vector<int>>::iterator it_s_m=s_m.begin();
     std::list<int>::iterator it_SI=SI.begin();
@@ -311,366 +499,46 @@ void inital_networks_stat(int N,double x,int sims,std::list<int>& num_inf,std::l
 }
 
 
-void GillespieMC(int& steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_num_inf,
-                 std::list<double>::iterator &it_avec_sum,std::list<double> &avec_sum,
-                 std::list<double>::iterator &it_t,std::list<double> &t,
-                 std::list<std::vector<int>> &infected_node,std::list<std::vector<int>>::iterator &it_infected_node,
-                 std::list< std::vector<int>> &infected_neighbors_in,std::list< std::vector<int>>::iterator &it_infected_neighbors_in,
-                 std::list< std::vector<int>> &infected_neighbors_out,std::list< std::vector<int>>::iterator &it_infected_neighbors_out,
-                 std::list<std::vector<int>> &sigma,std::list<std::vector<int>>::iterator &it_sigma,
-                 std::list<std::vector<int>> &s_m,std::list<std::vector<int>>::iterator &it_s_m,
-                 std::list<std::vector<int>> &positions,std::list<std::vector<int>>::iterator &it_positions,
-                 std::list< std::vector<std::vector<int>>> &susceptible_nodes,std::list< std::vector<std::vector<int>>>::iterator& it_susceptible_nodes,
-                 std::list<int> &SI,std::list<int>::iterator &it_SI,std::list<bool> &skip,std::list<bool>::iterator &it_skip,
-                 double Alpha,double tau,int k_max,double& death,double Beta,std::vector<int> &degrees_in,std::vector<int> &degrees_out,
-                 std::vector<std::vector<int>> &Adjlist_in,std::vector<std::vector<int>> &Adjlist_out,std::list<double>::iterator &it_weights,
-                 std::list<double> &weights,std::mt19937& gen,std::uniform_real_distribution<double>& uniform_dist,
-                 std::exponential_distribution<double>& exponential_dist){
-    int temp_count_steps(0),temp_count_num_inf(0);
-    int m_in,m_out,node;
-    double r1,r2,s_m_sum;
-    std::list<double> t0(t);
-    auto it_t0=t0.begin();
-
-    while (0<steps_c){
-        //The initialized iterators of the different list
-        temp_count_steps++;
-        temp_count_num_inf=0;
-
-        it_num_inf=num_inf.begin();
-        it_avec_sum=avec_sum.begin();
-        it_t=t.begin();
-        it_infected_node=infected_node.begin();
-        it_infected_neighbors_in=infected_neighbors_in.begin();
-        it_infected_neighbors_out=infected_neighbors_out.begin();
-        it_sigma=sigma.begin();
-        it_s_m=s_m.begin();
-        it_positions=positions.begin();
-        it_susceptible_nodes =susceptible_nodes.begin();
-        it_SI = SI.begin();
-        it_skip = skip.begin();
-        it_t0=t0.begin();
-
-
-        // For all networks draw the exponentially distributed time step
-        while (it_num_inf!=num_inf.end()){
-            if (*it_skip){
-                ++it_num_inf;
-                ++it_avec_sum;
-                ++it_t;
-                ++it_infected_node;
-                ++it_infected_neighbors_in;
-                ++it_infected_neighbors_out;
-                ++it_sigma;
-                ++it_s_m;
-                ++it_positions;
-                ++it_susceptible_nodes;
-                ++it_SI;
-                ++it_skip;
-                continue;
-            }
-            temp_count_num_inf++;
-            r1 = uniform_dist(gen);
-            r2 = -std::log(uniform_dist(gen));
-//            r1 = rand()/(double(RAND_MAX));
-//            r2 = std::log(1.0/(double(rand())/double(RAND_MAX)));
-            *it_avec_sum = (*it_num_inf)*Alpha+(*it_SI)*Beta;
-            *it_t = *it_t + r2/(*it_avec_sum);
-            if ((*it_t)-(*it_t0)>tau){
-                (*it_skip)=true;
-                steps_c = steps_c - 1;
-            }
-//            *it_t =*(std::prev(it_t)) + r2/(*it_avec_sum);
-
-            //Pick a node, change its state and update the transition rates
-            if (r1<(*it_num_inf)*Alpha/(*it_avec_sum)) {
-                // Recover an infected node
-//                node = (*it_infected_node)[int(rand())%(*it_num_inf)]; //randomly choose infected node
-                std::uniform_int_distribution<int> node_dist(0,*it_num_inf-1);
-                node = (*it_infected_node)[node_dist(gen)]; //randomly choose infected node
-//                m = (*it_infected_neighbors)[node]; //number of infected neighbors
-                m_in = (*it_infected_neighbors_in)[node]; //number of infected neighbors that infecting the node
-                m_out = (*it_infected_neighbors_out)[node]; //number of infected neighbors that the node infect
-                (*it_sigma)[node]=0;
-                (*it_num_inf)--;
-                //Remove node from infected list and add to susceptible list
-                remove_infected_node(node,*it_infected_node,*it_positions);
-                if ((*it_num_inf)==0){
-                    //Advance to the next simulation in the list
-                    ++it_num_inf;
-                    ++it_avec_sum;
-                    ++it_t;
-                    ++it_t0;
-                    ++it_infected_node;
-                    ++it_infected_neighbors_in;
-                    ++it_infected_neighbors_out;
-                    ++it_sigma;
-                    ++it_s_m;
-                    ++it_positions;
-                    ++it_susceptible_nodes;
-                    ++it_SI;
-                    continue;
-                }
-//                (*it_SI) = 2*m-degrees[node];
-                (*it_SI) = (*it_SI) + m_in + m_out - degrees_out[node];
-
-//                remove_infected_node(node,*it_infected_node,*it_positions);
-//                add_susceptible_node(node,m,*it_susceptible_nodes,*it_positions);
-//                if ((*it_num_inf)<=0){
-//                    continue;
-//                }
-                add_susceptible_node(node,m_in,*it_susceptible_nodes,*it_positions);
-
-
-                // Increment number of susceptible nodes with m infected nodes
-                (*it_s_m)[m_in]++;
-
-
-                decrement_susc_neighbs(degrees_in[node],degrees_out[node],Adjlist_in[node],Adjlist_out[node],*it_susceptible_nodes,
-                                       *it_infected_neighbors_in,*it_infected_neighbors_out,*it_s_m,*it_positions,*it_sigma,node,*it_infected_node,temp_count_steps,temp_count_num_inf);
-
-
-            }
-            else{
-                //Infected a susceptible node
-                // Pick an m class with probability proportional to the total number of SI links in that m class i.e. s_m[m]*m
-//                r1= rand()/(double(RAND_MAX));
-                r1= uniform_dist(gen)*(*it_SI);
-//                r1=r1*(*it_SI);
-                s_m_sum = 0;
-//                for (int m1=0;m1<=k_max;m1++){
-                for (int m1=1;m1<=k_max;m1++){
-                    s_m_sum = s_m_sum + (*it_s_m)[m1]*m1;
-                    if (r1<=s_m_sum){
-                        // choose a node with m infected neighbours at random
-                        std::uniform_int_distribution<int> node_dist(0,(*it_s_m)[m1]-1);
-                        node = (*it_susceptible_nodes)[m1][node_dist(gen)];
-//                        node = (*it_susceptible_nodes)[m1][rand()%(*it_s_m)[m1]];
-                        break;
-                    }
-                }
-//                m = (*it_infected_neighbors)[node];
-                m_in = (*it_infected_neighbors_in)[node];
-                m_out = (*it_infected_neighbors_out)[node];
-                (*it_sigma)[node] = 1;
-                *it_num_inf = (*it_num_inf)+1;
-//                *it_SI = *it_SI - 2*m - degrees[node];
-//                (*it_SI) = 2*m_in+2*m_out-degrees_in[node]-degrees_out[node];
-
-
-                // Remove the node from susceptible list and add to infected list
-                remove_susceptible_node(node,m_in,*it_susceptible_nodes,*it_positions);
-                add_infected_node(node,*it_infected_node,*it_positions);
-
-                //Decrement number of susceptible nodes
-                (*it_s_m)[m_in]--;
-
-                // change the neighbours to other lists and adjust s_m
-
-//                increment_susc_neighbs(degrees_in[node],degrees_out[node],Adjlist_in[node],Adjlist_out[node],
-//                                       *it_susceptible_nodes,*it_infected_neighbors_in,*it_infected_neighbors_out,
-//                                       *it_s_m,*it_positions,*it_sigma);
-//                if (susceptible_nodes.size()<198){
-//                    bool stop= true;
-//                }
-                increment_susc_neighbs(degrees_in[node],degrees_out[node],Adjlist_in[node],Adjlist_out[node],
-                                       *it_susceptible_nodes,*it_infected_neighbors_in,*it_infected_neighbors_out,
-                                       *it_s_m,*it_positions,*it_sigma);
-
-                (*it_SI) = (*it_SI) + degrees_out[node] - m_in - m_out;
-            }
-            //Advance to the next simulation in the list
-            ++it_num_inf;
-            ++it_avec_sum;
-            ++it_t;
-            ++it_infected_node;
-            ++it_infected_neighbors_in;
-            ++it_infected_neighbors_out;
-            ++it_sigma;
-            ++it_s_m;
-            ++it_positions;
-            ++it_susceptible_nodes;
-            ++it_SI;
-            ++it_skip;
-        } //end one time step
-
-        temp_count_num_inf=0;
-
-        it_num_inf=num_inf.begin();
-        it_avec_sum=avec_sum.begin();
-        it_t=t.begin();
-        it_infected_node=infected_node.begin();
-        it_infected_neighbors_in=infected_neighbors_in.begin();
-        it_infected_neighbors_out=infected_neighbors_out.begin();
-        it_sigma=sigma.begin();
-        it_s_m=s_m.begin();
-        it_positions=positions.begin();
-        it_susceptible_nodes =susceptible_nodes.begin();
-        it_SI = SI.begin();
-        it_weights =weights.begin();
-
-        while (it_num_inf!=num_inf.end()){
-            temp_count_num_inf++;
-            if (temp_count_num_inf==199){
-                bool stop=true;
-            }
-            if (*it_num_inf<=0){
-                death = death + (*it_weights);
-                it_num_inf=num_inf.erase(it_num_inf);
-                it_avec_sum=avec_sum.erase(it_avec_sum);
-                it_t=t.erase(it_t);
-                it_infected_node=infected_node.erase(it_infected_node);
-                it_infected_neighbors_in=infected_neighbors_in.erase(it_infected_neighbors_in);
-                it_infected_neighbors_out=infected_neighbors_out.erase(it_infected_neighbors_out);
-                it_sigma=sigma.erase(it_sigma);
-                it_s_m=s_m.erase(it_s_m);
-                it_positions=positions.erase(it_positions);
-                it_susceptible_nodes=susceptible_nodes.erase(it_susceptible_nodes);
-                it_SI=SI.erase(it_SI);
-                it_weights = weights.erase(it_weights);
-                steps_c =steps_c-1;
-                if (it_num_inf==num_inf.end()){
-                    break;
-                }
-                continue;
-            }
-            ++it_num_inf;
-            ++it_avec_sum;
-            ++it_t;
-            ++it_infected_node;
-            ++it_infected_neighbors_in;
-            ++it_infected_neighbors_out;
-            ++it_sigma;
-            ++it_s_m;
-            ++it_positions;
-            ++it_susceptible_nodes;
-            ++it_SI;
-            ++it_skip;
-        }
-        std::cout <<"Time "<<  temp_count_steps <<" "<< "Simulation "<<temp_count_num_inf<<std::endl;
-        temp_count_num_inf=0;
+double GillespieMC(double tau,std::mt19937& gen,std::uniform_real_distribution<double>& uniform_dist,
+                 std::exponential_distribution<double> &exponential_dist,networks_dynamics &net_d,network_topology &net_t){
+    simulation_data network(net_d);
+    std::pair<double,simulation_data> data_sim_gillespie(0.0,network);
+    double death=0.0,org_weight=std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);;
+    while (!network.end(net_d)){
+        data_sim_gillespie = network.gillespie(tau,gen,uniform_dist,net_d,net_t);
+        death+= data_sim_gillespie.first;
+        if (data_sim_gillespie.first>0.0){
+//            network = data_sim_gillespie.second;
+            std::cout<<data_sim_gillespie.first<<",";
+            continue;} // The simulation was erased so network points to the next network
+        ++network;
     }
-    steps_c = num_inf.size();
+    double final_weight=std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);;
+    std::cout<<std::endl<<"Before return deaths"<<death<<std::endl;
+    return org_weight-final_weight;
 }
 
 
-void resample(int steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_num_inf,
-              std::list<double>::iterator &it_avec_sum,std::list<double> &avec_sum,
-              std::list<double>::iterator &it_t,std::list<double> &t,
-              std::list<std::vector<int>> &infected_node,std::list<std::vector<int>>::iterator &it_infected_node,
-              std::list< std::vector<int>> &infected_neighbors_in,std::list< std::vector<int>>::iterator &it_infected_neighbors_in,
-              std::list< std::vector<int>> &infected_neighbors_out,std::list< std::vector<int>>::iterator &it_infected_neighbors_out,
-              std::list<std::vector<int>> &sigma,std::list<std::vector<int>>::iterator &it_sigma,
-              std::list<std::vector<int>> &s_m,std::list<std::vector<int>>::iterator &it_s_m,
-              std::list<std::vector<int>> &positions,std::list<std::vector<int>>::iterator &it_positions,
-              std::list< std::vector<std::vector<int>>> &susceptible_nodes,std::list< std::vector<std::vector<int>>>::iterator &it_susceptible_nodes,
-              std::list<int> &SI,std::list<int>::iterator &it_SI,std::list<bool> &skip,std::list<bool>::iterator &it_skip,
-              double Alpha,double tau,int k_max,double death,double Beta,std::vector<int> &degrees_in,std::vector<int> &degrees_out,
-              std::vector<std::vector<int>> &Adjlist_in,std::vector<std::vector<int>> &Adjlist_out,std::list<double> &weights,std::list<double>::iterator &it_weights,
-              std::deque<double> &Nlimits,std::vector<double> death_vec) {
-
-
-
-    struct simulation_data{
-    public:
-        std::list<int>::iterator i_num_inf;
-        std::list<double>::iterator i_weights;
-        std::list<double>::iterator i_avec_sum;
-        std::list<double>::iterator i_t;
-        std::list<std::vector<int>>::iterator i_infected_node;
-        std::list<std::vector<int>>::iterator i_infected_neighbors_in;
-        std::list<std::vector<int>>::iterator i_infected_neighbors_out;
-        std::list<std::vector<int>>::iterator i_sigma;
-        std::list<std::vector<int>>::iterator i_s_m;
-        std::list<std::vector<int>>::iterator i_positions;
-        std::list<std::vector<std::vector<int>>>::iterator i_susceptible_nodes;
-        std::list<int>::iterator i_SI;
-
-        // Constructor to initialize the member variables
-        simulation_data(
-                // The types are: num_inf,weights, avec_sum,t,infected_node,infected_neighbors_in,infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI
-                std::list<int>::iterator i_num_inf,
-                std::list<double>::iterator i_weights,
-                std::list<double>::iterator i_avec_sum,
-                std::list<double>::iterator i_t,
-                std::list<std::vector<int>>::iterator i_infected_node,
-                std::list<std::vector<int>>::iterator i_infected_neighbors_in,
-                std::list<std::vector<int>>::iterator i_infected_neighbors_out,
-                std::list<std::vector<int>>::iterator i_sigma,
-                std::list<std::vector<int>>::iterator i_s_m,
-                std::list<std::vector<int>>::iterator i_positions,
-                std::list<std::vector<std::vector<int>>>::iterator i_susceptible_nodes,
-                std::list<int>::iterator i_SI
-        ) : i_num_inf(i_num_inf), i_weights(i_weights), i_avec_sum(i_avec_sum), i_t(i_t), i_infected_node(i_infected_node), i_infected_neighbors_in(i_infected_neighbors_in)
-        , i_infected_neighbors_out(i_infected_neighbors_out), i_sigma(i_sigma), i_s_m(i_s_m), i_positions(i_positions), i_susceptible_nodes(i_susceptible_nodes), i_SI(i_SI) {}
-    };
-
-
-
-
+std::pair<std::vector<std::deque<simulation_data>>,std::vector<double> > create_bins(std::deque<double> &Nlimits,
+                                                networks_dynamics &net_d){
+ // A function that creates the bin vector which store all simulations according to their relative number of infected nodes to Nlimits
+    simulation_data sim_data(net_d);
     std::deque<double>::iterator it_bin;
     int pos;
-    it_num_inf = num_inf.begin();
-    it_avec_sum = avec_sum.begin();
-    it_t = t.begin();
-    it_infected_node = infected_node.begin();
-    it_infected_neighbors_in = infected_neighbors_in.begin();
-    it_infected_neighbors_out = infected_neighbors_out.begin();
-    it_sigma = sigma.begin();
-    it_s_m = s_m.begin();
-    it_positions = positions.begin();
-    it_susceptible_nodes = susceptible_nodes.begin();
-    it_SI = SI.begin();
-    bool stop = false;
-    double wtot_temp = 0.0;
-    double split = 0;
-    double wrand, w_temp = 0.0;
+    std::vector<std::deque<simulation_data>> bins(Nlimits.size());
     std::vector<double> wtot(Nlimits.size(), 0.0);
-//    it_skip = skip.begin();
 
-    // The types are: num_inf,weights, avec_sum,t,infected_node,t,infected_neighbors_in,infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI
-//    std::tuple<std::list<int>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator, std::list<std::vector<std::vector<int>>>::iterator, std::list<int>::iterator> sim_data;
-//    // Vector where in each bin there is a simulation data to be either united of split with other simulations in the same bin
-    std::vector<simulation_data> sim_data;
-    std::deque<std::tuple<std::list<int>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<std::vector<int>>::iterator,
-            std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator,
-            std::list<std::vector<int>>::iterator, std::list<std::vector<std::vector<int>>>::iterator, std::list<int>::iterator>> bin;
-//    auto it_temp=bin.end();
-//    std::vector<std::deque<  std::tuple<std::list<int>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<double>::iterator,std::list<std::vector<int>>::iterator,
-//            std::list< std::vector<int>>::iterator,std::list< std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator,std::list< std::vector<std::vector<int>>>::iterator,std::list<int>::iterator>>> consmall(Nlimits.size()),bins(Nlimits.size());
-//    std::vector<std::deque<std::tuple<std::list<int>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator, std::list<std::vector<std::vector<int>>>::iterator, std::list<int>::iterator>>> consmall(
-//            Nlimits.size()), bins(Nlimits.size());
-//    std::deque<std::tuple<std::list<int>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator,
-//            std::list<std::vector<int>>::iterator, std::list<std::vector<std::vector<int>>>::iterator, std::list<int>::iterator>>::iterator it_path_to_unify, it_sim_unified;
-    std::vector<std::deque<simulation_data>> consmall(Nlimits.size()),bins(Nlimits.size());
-    std::deque<simulation_data>::iterator it_path_to_unify,it_sim_unified;
+    while (sim_data.i_num_inf != net_d.num_inf.end()) {
+        it_bin = std::lower_bound(Nlimits.begin(), Nlimits.end(), *sim_data.i_num_inf);
+        pos = std::distance(Nlimits.begin(), it_bin)-1;
 
-
-    while (it_num_inf != num_inf.end()) {
-        it_bin = std::lower_bound(Nlimits.begin(), Nlimits.end(), *it_num_inf);
-//        it_bin = std::upper_bound(Nlimits.begin(),Nlimits.end(),*it_num_inf);
-        pos = std::distance(Nlimits.begin(), it_bin);
-
-//        std::tuple<std::list<int>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<double>::iterator, std::list<std::vector<int>>::iterator,
-//                std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator, std::list<std::vector<int>>::iterator,
-//                std::list<std::vector<int>>::iterator, std::list<std::vector<std::vector<int>>>::iterator, std::list<int>::iterator> sim_data =
-//                std::make_tuple(it_num_inf, it_weights, it_avec_sum, it_t, it_infected_node, it_infected_neighbors_in,
-//                                it_infected_neighbors_out, it_sigma, it_s_m, it_positions, it_susceptible_nodes, it_SI);
-        simulation_data sim_data(it_num_inf,it_weights,it_avec_sum,it_t,it_infected_node,it_infected_neighbors_in,it_infected_neighbors_out,it_sigma,it_s_m,
-        it_positions,it_susceptible_nodes,it_SI);
-        wtot[pos] += (*it_weights);
+        wtot[pos] += (*sim_data.i_weights);
         if (bins[pos].empty() == true) {
             bins[pos].push_back(sim_data);
         } else {
-            if (*bins[pos].front().i_weights > (*it_weights)) {
+            if (*bins[pos].front().i_weights > (*sim_data.i_weights)) {
                 bins[pos].push_front(sim_data);
-            } else if (*bins[pos].back().i_weights < (*it_weights)) {
+            } else if (*bins[pos].back().i_weights < (*sim_data.i_weights)) {
                 bins[pos].push_back(sim_data);
             } else {
                 for (auto it_we_r = bins[pos].begin(); it_we_r != bins[pos].end(); ++it_we_r) {
@@ -680,130 +548,127 @@ void resample(int steps_c,std::list<int> &num_inf,std::list<int>::iterator &it_n
                         bins[pos].push_back(sim_data);
                         break;
                     }
-                    if (*it_we_r->i_weights <= (*it_weights) &&
-                            *next_sim->i_weights >= (*it_weights)) {
+                    if (*it_we_r->i_weights <= (*sim_data.i_weights) &&
+                        *next_sim->i_weights >= (*sim_data.i_weights)) {
                         bins[pos].insert(it_we_r, sim_data);
                         break;
                     }
                 }
             }
         }
-        ++it_num_inf;
-        ++it_weights;
-        ++it_avec_sum;
-        ++it_t;
-        ++it_infected_node;
-        ++it_infected_neighbors_in;
-        ++it_infected_neighbors_out;
-        ++it_sigma;
-        ++it_s_m;
-        ++it_positions;
-        ++it_susceptible_nodes;
-        ++it_SI;
+        ++sim_data;
     }
-    auto death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-    auto weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
-    int addition_step_c = 0;
-        for (int i = 0; i < bins.size(); i++) {
-            for (auto it_sim = bins[i].begin(); it_sim != bins[i].end(); ++it_sim) {
-                split = (*it_sim->i_weights * steps_c) / ( wtot[i]);
-                int temp = std::ceil(split);
-//                if (split < 1) {
-//                    continue;
-//                } else if (split > 1) {
-            if (split > 1) {
-                    num_inf.insert(it_sim->i_num_inf,std::ceil(split), *it_sim->i_num_inf);
-                    weights.insert(it_sim->i_weights, std::ceil(split), *it_sim->i_weights / double(std::ceil(split)+1.0));
-                    death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-                    weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
-                    *it_sim->i_weights = *it_sim->i_weights / double(std::ceil(split)+1.0);
-                    death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-                    weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
-                    avec_sum.insert(it_sim->i_avec_sum, std::ceil(split), *it_sim->i_avec_sum);
-                    t.insert(it_sim->i_t,std::ceil(split), *it_sim->i_t);
-                    infected_node.insert(it_sim->i_infected_node, std::ceil(split), *it_sim->i_infected_node);
-                    infected_neighbors_in.insert(it_sim->i_infected_neighbors_in, std::ceil(split), *it_sim->i_infected_neighbors_in);
-                    infected_neighbors_out.insert(it_sim->i_infected_neighbors_out, std::ceil(split), *it_sim->i_infected_neighbors_out);
-                    sigma.insert(it_sim->i_sigma, std::ceil(split), *it_sim->i_sigma);
-                    s_m.insert(it_sim->i_s_m, std::ceil(split), *it_sim->i_s_m);
-                    positions.insert(it_sim->i_positions, std::ceil(split), *it_sim->i_positions);
-                    susceptible_nodes.insert(it_sim->i_susceptible_nodes, std::ceil(split), *it_sim->i_susceptible_nodes);
-                    SI.insert(it_sim->i_SI, std::ceil(split), *it_sim->i_SI);
-                    addition_step_c += std::ceil(split)-1;
-                    death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-                    weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
-                } else if (split  < 1.0) {
-                    consmall[i].push_back(*it_sim);
-                }
-            }
+    return std::make_pair(bins,wtot);
+}
+
+
+void duplicate_bin(double split,std::deque<simulation_data>::iterator &it_sim,networks_dynamics &net_d){
+    // This function duplicate bins in the bin vector, the number of bins duplicated are split
+    net_d.num_inf.insert(it_sim->i_num_inf,std::ceil(split-1), *it_sim->i_num_inf);
+    net_d.weights.insert(it_sim->i_weights, std::ceil(split-1), *it_sim->i_weights / double(std::ceil(split)));
+    *it_sim->i_weights = *it_sim->i_weights / double(std::ceil(split));
+    net_d.avec_sum.insert(it_sim->i_avec_sum, std::ceil(split-1), *it_sim->i_avec_sum);
+    net_d.t.insert(it_sim->i_t,std::ceil(split-1), *it_sim->i_t);
+    net_d.infected_node.insert(it_sim->i_infected_node, std::ceil(split-1), *it_sim->i_infected_node);
+    net_d.infected_neighbors_in.insert(it_sim->i_infected_neighbors_in, std::ceil(split-1), *it_sim->i_infected_neighbors_in);
+    net_d.infected_neighbors_out.insert(it_sim->i_infected_neighbors_out, std::ceil(split-1), *it_sim->i_infected_neighbors_out);
+    net_d.sigma.insert(it_sim->i_sigma, std::ceil(split-1), *it_sim->i_sigma);
+    net_d.s_m.insert(it_sim->i_s_m, std::ceil(split-1), *it_sim->i_s_m);
+    net_d.positions.insert(it_sim->i_positions, std::ceil(split-1), *it_sim->i_positions);
+    net_d.susceptible_nodes.insert(it_sim->i_susceptible_nodes, std::ceil(split-1), *it_sim->i_susceptible_nodes);
+    net_d.SI.insert(it_sim->i_SI, std::ceil(split-1), *it_sim->i_SI);
+}
+
+
+void erase_bin(std::deque<simulation_data>::iterator &it_sim,networks_dynamics &net_d){
+    // This function duplicate bins in the bin vector, the number of bins duplicated are split
+    net_d.num_inf.erase(it_sim->i_num_inf);
+    net_d.weights.erase(it_sim->i_weights);
+    net_d.avec_sum.erase(it_sim->i_avec_sum);
+    net_d.t.erase(it_sim->i_t);
+    net_d.infected_node.erase(it_sim->i_infected_node);
+    net_d.infected_neighbors_in.erase(it_sim->i_infected_neighbors_in);
+    net_d.infected_neighbors_out.erase(it_sim->i_infected_neighbors_out);
+    net_d.sigma.erase(it_sim->i_sigma);
+    net_d.s_m.erase(it_sim->i_s_m);
+    net_d.positions.erase(it_sim->i_positions);
+    net_d.susceptible_nodes.erase(it_sim->i_susceptible_nodes);
+    net_d.SI.erase(it_sim->i_SI);
+}
+
+void unify_simulations(std::deque<simulation_data> &consamll,
+                       std::deque<simulation_data>::iterator &end_simulation,
+                       double weight,networks_dynamics &net_d){
+    int count=0;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    int max_elements = std::distance(consamll.begin(), end_simulation);
+    std::uniform_int_distribution<int> sim_dist(0,max_elements-1);
+    int selected_surviving_sim = int(sim_dist(gen));
+    auto it_sim=consamll.begin();
+    while (it_sim!=end_simulation){
+        if (count==selected_surviving_sim){
+            *it_sim->i_weights=weight;
+//            std::cout<<"insided while "<<*it_sim->i_weights<<std::endl;
         }
+        else{erase_bin(it_sim,net_d);}
+        consamll.pop_front();
+        it_sim =consamll.begin();
+//        std::cout<<selected_surviving_sim
+        count++;
+    }
+}
 
-    for (int i = 0; i < consmall.size(); i++) {
-            wtot_temp = 0.0;
-            it_sim_unified = consmall[i].begin();
-            while (it_sim_unified != consmall[i].end()) {
-                wtot_temp += *it_sim_unified->i_weights;
-                auto next_sim =it_sim_unified;
-                ++next_sim;
-                if (wtot_temp > wtot[i] / steps_c or next_sim == consmall[i].end()) {
-//                    wrand = (rand() / (double(RAND_MAX))) * wtot_temp;
-                    std::uniform_real_distribution<double> uniform_dist(0.0, wtot_temp);
-                    std::random_device rd;
-                    std::mt19937 gen(rd());
-                    wrand = uniform_dist(gen);
-                    w_temp = 0.0;
-//                stop=false;
-                    it_path_to_unify = consmall[i].begin();
-                    while (it_path_to_unify != it_sim_unified) {
-                        w_temp += *it_sim_unified->i_weights;
-                        if (wrand > w_temp) {
-                            *it_path_to_unify->i_weights=wtot_temp;
+void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d) {
+
+    double wtot_sum,split;
+    // Vector where in each bin there is a simulation data to be either united of split with other simulations in the same bin
+    auto bins_con = create_bins(Nlimits,net_d);
+    auto bins = bins_con.first;
+    auto wtot = bins_con.second;
+
+    std::vector<simulation_data> sim_data;
+    std::vector<std::deque<simulation_data>> consmall(Nlimits.size());
 
 
-                            num_inf.erase(it_path_to_unify->i_num_inf);
-                            weights.erase(it_path_to_unify->i_weights);
-                            avec_sum.erase(it_path_to_unify->i_avec_sum);
-                            t.erase(it_path_to_unify->i_t);
-                            infected_node.erase(it_path_to_unify->i_infected_node);
-                            infected_neighbors_in.erase(it_path_to_unify->i_infected_neighbors_in);
-                            infected_neighbors_out.erase(it_path_to_unify->i_infected_neighbors_out);
-                            sigma.erase(it_path_to_unify->i_sigma);
-                            s_m.erase(it_path_to_unify->i_s_m);
-                            positions.erase(it_path_to_unify->i_positions);
-                            susceptible_nodes.erase(it_path_to_unify->i_susceptible_nodes);
-                            SI.erase(it_path_to_unify->i_SI);
-                            addition_step_c--;
-
-
-                            it_path_to_unify = consmall[i].erase(it_path_to_unify);
-                            continue;
-                        }
-                        num_inf.erase(it_path_to_unify->i_num_inf);
-                        weights.erase(it_path_to_unify->i_weights);
-                        avec_sum.erase(it_path_to_unify->i_avec_sum);
-                        t.erase(it_path_to_unify->i_t);
-                        infected_node.erase(it_path_to_unify->i_infected_node);
-                        infected_neighbors_in.erase(it_path_to_unify->i_infected_neighbors_in);
-                        infected_neighbors_out.erase(it_path_to_unify->i_infected_neighbors_out);
-                        sigma.erase(it_path_to_unify->i_sigma);
-                        s_m.erase(it_path_to_unify->i_s_m);
-                        positions.erase(it_path_to_unify->i_positions);
-                        susceptible_nodes.erase(it_path_to_unify->i_susceptible_nodes);
-                        SI.erase(it_path_to_unify->i_SI);
-                        addition_step_c--;
-                        it_path_to_unify = consmall[i].erase(it_path_to_unify);
-                        continue;
-                    }
-                }
-                ++it_sim_unified;
+    // This for loop is meant to split bins that has too much weight and to record those with lower weight to be unified later
+    for (int i = 0; i < bins.size(); i++) {
+        for (auto it_sim = bins[i].begin(); it_sim != bins[i].end(); ++it_sim) {
+            split = ( *it_sim->i_weights*steps_c/2)/(wtot[i]);
+        if (split > 1) {
+            duplicate_bin(split,it_sim,net_d);
+//            steps_c += std::ceil(split)-1;
             }
+        else if (4*split<1) {consmall[i].push_back(*it_sim);}
         }
-//        steps_c = steps_c+addition_step_c;
-        death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-        weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
-        bool temp85=true;
+    }
+    double weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
+    std::cout << "split Weights = " << weight_sum<<std::endl;
+
+
+    // This for loop is to unify bins that has a low weight
+    std::deque<simulation_data>::iterator it_sim_unified;
+    for (int i=0; i<consmall.size();i++){
+        wtot_sum =0.0;
+        it_sim_unified = consmall[i].begin();
+        while (it_sim_unified!=consmall[i].end()){
+            wtot_sum += *it_sim_unified->i_weights;
+            if (wtot_sum>wtot[i]/steps_c){
+//                std::cout<<"Weights unify"<<wtot_sum<<std::endl;
+                unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d);
+                wtot_sum = 0.0;
+            }
+            ++it_sim_unified;
+        }
+        if (consmall[i].empty()){continue;}
+        unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d);
+    }
+    weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
+    std::cout << "unify Weights = " << weight_sum<<std::endl;
 
 }
+
+
 int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
     int n_min_new = num_inf.size();
     int count_smaller = 0;
@@ -845,10 +710,7 @@ int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
     return n_min_new;
 }
 
-
-
 int main() {
-    int m_in,m_out,node;  //k_max maximal degree, N number of nodes, sims number of simulations
     double death(0),r1,r2,s_m_sum;
     std::fstream Adjfile_in,Adjfile_out,parametersfile;
     std::string filename_in("Adjin_0.txt"), filename_out("Adjout_0.txt"), parametersname("parameters.csv");
@@ -873,8 +735,6 @@ int main() {
     std::list<double>::iterator it_t(t.begin());
     std::list< std::vector<int>> infected_neighbors_in(steps_c,std::vector<int>(N,0)),infected_neighbors_out(steps_c,std::vector<int>(N,0));
     std::list< std::vector<int>>::iterator it_infected_neighbors_in(infected_neighbors_in.begin()),it_infected_neighbors_out(infected_neighbors_out.begin());
-    std::list<bool> skip(sims, false);
-    std::list<bool>::iterator it_skip=skip.begin();
 
     // Define distributions for generating random numbers
     std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
@@ -896,7 +756,6 @@ int main() {
     std::list<std::vector<int>>::iterator it_s_m(s_m.begin());
     inital_networks_stat(N,inital_inf_percent,sims,num_inf,infected_node,infected_neighbors_in,infected_neighbors_out,sigma,
                          degrees_in,degrees_out,Adjlist_in,Adjlist_out,positions,susceptible_nodes,SI,s_m,k_max,gen,int_dist);
-    int temp_count_steps(0),temp_count_num_inf(0);
     std::vector<double> death_vec;
     std::deque<double> Nlimits={0,mf_solution,N+1.0};
 
@@ -905,37 +764,39 @@ int main() {
     int Bins;
     double death_sum(std::accumulate(death_vec.begin(),death_vec.end(),0.0)),weight_sum(std::accumulate(weights.begin(),weights.end(),0.0));
 
+    // End of variable defnitions
+
+    networks_dynamics net_d(num_inf,weights,avec_sum,t,infected_node,infected_neighbors_in,
+                            infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI);
+    network_topology net_t(Alpha,Beta,k_max,degrees_in,degrees_out,Adjlist_in,Adjlist_out);
     for(int j=0;j<it;j++){
-        // Run Gillespie's time step and update the number of deaths
-        death=0;
-        GillespieMC(steps_c,num_inf,it_num_inf,it_avec_sum,avec_sum,it_t,t,infected_node,it_infected_node,infected_neighbors_in,it_infected_neighbors_in,
-                    infected_neighbors_out,it_infected_neighbors_out,sigma,it_sigma,s_m,it_s_m,positions,it_positions,susceptible_nodes,it_susceptible_nodes,
-                    SI,it_SI,skip,it_skip,Alpha,tau,k_max,death,Beta,degrees_in,degrees_out,Adjlist_in,Adjlist_out,it_weights,weights,gen,uniform_dist,exponential_dist);
-        death_sum=std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-        weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
+        // Run Gillespie's time step and update the number of deaths and net_d
+        death = GillespieMC(tau,gen,uniform_dist,exponential_dist,net_d,net_t);
         death_vec.push_back(death);
 
         // Add to Nlimits a new bin if there is enough flux going to a lower infected level
-        n_min_new=find_new_min(num_inf,new_trajectory_bin);
+        n_min_new=find_new_min(net_d.num_inf,new_trajectory_bin);
         if (n_min_new<n_min-jump && Nlimits[1]>jump){
             n_min=n_min_new;
             Nlimits.push_front(Nlimits[0]);
             Nlimits[1]=n_min;
         }
         // Resample the paths so highly weighted simulations are split and low weighted simulations are unified
-        resample(sims,num_inf,it_num_inf,it_avec_sum,avec_sum,it_t,t,infected_node,it_infected_node,infected_neighbors_in,it_infected_neighbors_in,
-                 infected_neighbors_out,it_infected_neighbors_out,sigma,it_sigma,s_m,it_s_m,positions,it_positions,susceptible_nodes,it_susceptible_nodes,
-                 SI,it_SI,skip,it_skip,Alpha,tau,k_max,death,Beta,degrees_in,degrees_out,Adjlist_in,Adjlist_out,weights,it_weights,Nlimits,death_vec);
         death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-        weight_sum = std::accumulate(weights.begin(),weights.end(),0.0);
-        for (it_skip=skip.begin();it_skip!=skip.end();++it_skip){
-            (*it_skip) = false;
-        }
-        skip.resize(num_inf.size(), false);
+        weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
+        std::cout << "Before Weights = " << weight_sum<<std::endl;
+        resample(steps_c,Nlimits,net_d);
+        death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
+        weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
+        std::cout<<"Weights: "<<weight_sum<<std::endl;
+        std::cout<<"Deaths: "<<death_sum<<std::endl;
+        std::cout << "Weights + Death = " << death_sum+weight_sum<<std::endl;
     }
 //    double death_sum(std::accumulate(death_vec.begin(),death_vec.end(),0.0)),weight_sum(std::accumulate(weights.begin(),weights.end(),0.0));
-    double TAU = tau/( (std::accumulate(death_vec.begin(),death_vec.end(),0.0))/death_vec.size() );
-    std::cout << "Extinction Time: " <<  TAU <<std::endl;
+    death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
+    double TAU = tau/( death_sum/death_vec.size() );
+    std::cout << "Extinction Time: " << TAU <<std::endl;
+    weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
     std::cout << "Check if probablitiy is conserved: Weights + Death = " << death_sum+weight_sum<<std::endl;
     return 0;
 }
