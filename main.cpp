@@ -2,26 +2,17 @@
 #include <vector>
 #include <list>
 #include <cmath>
-#include <iterator>
 #include <algorithm>
 #include <random>
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <stdlib.h>
 #include <tuple>
 #include <numeric>
 #include <experimental/filesystem>
-#include "stdio.h"
-#include "string.h"
-#include "math.h"
-#include "queue"
-#include "sstream"
-#include <unistd.h>
-#include <tuple>
 #include <deque>
 #include <tr1/tuple>
-
+#include <chrono>
 
 // Declaration of functions
 void remove_infected_node(int node,std::vector<int>& infected_node,std::vector<int> &positions);
@@ -211,7 +202,7 @@ public:
                                        *i_infected_neighbors_in,*i_infected_neighbors_out,*i_s_m,*i_positions,*i_sigma,*i_infected_node);
             }
             else{
-                //Infected a susceptible node
+                //Infect a susceptible node
                 // Pick an m class with probability proportional to the total number of SI links in that m class i.e. s_m[m]*m
                 r1= uniform_dist(gen)*(*i_SI);
                 s_m_sum = 0;
@@ -241,7 +232,9 @@ public:
         }
         *i_t += sim_time;
         if (*i_num_inf<=0){
-            return std::make_pair(*i_weights,erase_simulation(net_d));
+            double deleted_weights=*i_weights;
+//            return std::make_pair(*i_weights,erase_simulation(net_d));
+            return std::make_pair(deleted_weights,erase_simulation(net_d));
         }
         return std::make_pair(0.0,*this);
     }
@@ -341,10 +334,6 @@ void remove_susceptible_node(int node,int m, std::vector<std::vector<int>> &net_
 
     // Remove the node from the list by swapping the node with the last node in the list. This will not affect the
     // positioning of the other nodes once the position of the swapped last node is accounted for
-//    int temp,temp2;
-//    temp = net_susceptible_nodes[m].back();
-//    temp2 = net_susceptible_nodes[m][positions[node]];
-//    net_susceptible_nodes[m][positions[node]] = temp;
     net_susceptible_nodes[m][positions[node]] = net_susceptible_nodes[m].back();  // Move last node in list to nodes position
     positions[net_susceptible_nodes[m].back()] = positions[node]; // account for this change in the position vector
     net_susceptible_nodes[m].pop_back(); // remove the last node from the list
@@ -373,10 +362,8 @@ void increment_susc_neighbs(int k_in,int k_out,std::vector<int> &neighbs_in,std:
 
 
 void add_infected_node(int node,std::vector<int> &infected_nodes,std::vector<int> &positions){
-
     positions[node]= infected_nodes.size();
     infected_nodes.push_back(node);
-//    positions[node]= infected_nodes.size()-1;
 }
 
 
@@ -468,7 +455,15 @@ void intalized_sus(int N,std::list< std::vector<std::vector<int>>> &susceptible_
     }
 }
 
-void  intalize_SI_connections(std::list<int>& SI,std::list<std::vector<int>>& s_m,int k_max){
+template <typename T>
+void write_output_data(const std::string &filename,std::vector<T> &data){
+    std::ofstream file(filename,std::ios::app);
+    for (auto element=data.begin();element!=data.end();++element){file<<*element<<",";}
+    file<<std::endl;
+    file.close();
+}
+
+void intalize_SI_connections(std::list<int>& SI,std::list<std::vector<int>>& s_m,int k_max){
     std::list<std::vector<int>>::iterator it_s_m=s_m.begin();
     std::list<int>::iterator it_SI=SI.begin();
     while(it_SI!=SI.end()){
@@ -490,11 +485,8 @@ void inital_networks_stat(int N,double x,int sims,std::list<int>& num_inf,std::l
     num_inf = std::list<int>(sims,inital_infecteons);
     susceptible_nodes = std::list< std::vector<std::vector<int>>>(sims,std::vector<std::vector<int>>(k_max+1,std::vector<int>(0)));
     intalized_network_random_infection(N,inital_infecteons,sigma,infected_node,positions,gen,int_dist);
-//    std::mt19937 generator(std::random_device{}()); //random number generator
-//    intalize_infected_neighbours(N,sigma,infected_neighbors_in,infected_neighbors_out,degrees_in,degrees_out,Adjlist_in,Adjlist_out);
     intalize_infected_neighbours(N,infected_node,infected_neighbors_in,infected_neighbors_out,degrees_in,degrees_out,Adjlist_in,Adjlist_out);
     intalized_sus(N,susceptible_nodes,positions,sigma,s_m,infected_neighbors_in);
-//    intalize_SI_connections(N,SI,sigma,infected_neighbors_in,infected_neighbors_out,degrees_out);
     intalize_SI_connections(SI,s_m,k_max);
 }
 
@@ -503,19 +495,14 @@ double GillespieMC(double tau,std::mt19937& gen,std::uniform_real_distribution<d
                  std::exponential_distribution<double> &exponential_dist,networks_dynamics &net_d,network_topology &net_t){
     simulation_data network(net_d);
     std::pair<double,simulation_data> data_sim_gillespie(0.0,network);
-    double death=0.0,org_weight=std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);;
+    double death=0.0;;
     while (!network.end(net_d)){
         data_sim_gillespie = network.gillespie(tau,gen,uniform_dist,net_d,net_t);
         death+= data_sim_gillespie.first;
-        if (data_sim_gillespie.first>0.0){
-//            network = data_sim_gillespie.second;
-            std::cout<<data_sim_gillespie.first<<",";
-            continue;} // The simulation was erased so network points to the next network
+        if (data_sim_gillespie.first>0.0){continue;} // The simulation was erased so network points to the next network
         ++network;
     }
-    double final_weight=std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);;
-    std::cout<<std::endl<<"Before return deaths"<<death<<std::endl;
-    return org_weight-final_weight;
+    return death;
 }
 
 
@@ -596,30 +583,30 @@ void erase_bin(std::deque<simulation_data>::iterator &it_sim,networks_dynamics &
     net_d.SI.erase(it_sim->i_SI);
 }
 
-void unify_simulations(std::deque<simulation_data> &consamll,
-                       std::deque<simulation_data>::iterator &end_simulation,
-                       double weight,networks_dynamics &net_d){
-    int count=0;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    int max_elements = std::distance(consamll.begin(), end_simulation);
-    std::uniform_int_distribution<int> sim_dist(0,max_elements-1);
-    int selected_surviving_sim = int(sim_dist(gen));
+std::deque<simulation_data>::iterator randomly_select_simulation(std::deque<simulation_data> &consmall
+             ,std::deque<simulation_data>::iterator &end_simulation,double wtot,std::mt19937 &gen){
+    std::uniform_real_distribution<> sim_dist(0.0,wtot);
+    double weight_rand=sim_dist(gen),weight_sum=0.0;
+    for (auto it_sim=consmall.begin();it_sim!=end_simulation;++it_sim){
+        weight_sum+=*it_sim->i_weights;
+        if (weight_sum>=weight_rand){return it_sim;}
+    }
+    return end_simulation;
+}
+
+void unify_simulations(std::deque<simulation_data> &consamll,std::deque<simulation_data>::iterator &end_simulation,
+                       double weight,networks_dynamics &net_d,std::mt19937 &gen){
     auto it_sim=consamll.begin();
+    auto it_surviving_sim=randomly_select_simulation(consamll,end_simulation,weight,gen);
     while (it_sim!=end_simulation){
-        if (count==selected_surviving_sim){
-            *it_sim->i_weights=weight;
-//            std::cout<<"insided while "<<*it_sim->i_weights<<std::endl;
-        }
+        if (it_sim==it_surviving_sim){*it_sim->i_weights=weight;}
         else{erase_bin(it_sim,net_d);}
         consamll.pop_front();
         it_sim =consamll.begin();
-//        std::cout<<selected_surviving_sim
-        count++;
     }
 }
 
-void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d) {
+void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d,std::mt19937 &gen) {
 
     double wtot_sum,split;
     // Vector where in each bin there is a simulation data to be either united of split with other simulations in the same bin
@@ -642,9 +629,6 @@ void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d) 
         else if (4*split<1) {consmall[i].push_back(*it_sim);}
         }
     }
-    double weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
-    std::cout << "split Weights = " << weight_sum<<std::endl;
-
 
     // This for loop is to unify bins that has a low weight
     std::deque<simulation_data>::iterator it_sim_unified;
@@ -653,19 +637,15 @@ void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d) 
         it_sim_unified = consmall[i].begin();
         while (it_sim_unified!=consmall[i].end()){
             wtot_sum += *it_sim_unified->i_weights;
-            if (wtot_sum>wtot[i]/steps_c){
-//                std::cout<<"Weights unify"<<wtot_sum<<std::endl;
-                unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d);
+            if (wtot_sum>=wtot[i]/steps_c){
+                unify_simulations(consmall[i],++it_sim_unified,wtot_sum,net_d,gen);
                 wtot_sum = 0.0;
+                continue;
             }
             ++it_sim_unified;
         }
-        if (consmall[i].empty()){continue;}
-        unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d);
+        if (!consmall[i].empty()){unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d,gen);}
     }
-    weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
-    std::cout << "unify Weights = " << weight_sum<<std::endl;
-
 }
 
 
@@ -675,13 +655,9 @@ int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
     std::vector<std::pair<int,int>> infected_types;
 
 //    std::vector<int> number_of_infected_types,number_of_infected_types_values;
-    int count_temp_out = 0;
     for(auto outer_it=num_inf.begin();outer_it!=num_inf.end();++outer_it){
         count_smaller =0;
-        int count_temp=0;
-        count_temp_out++;
         for (auto inner_it = num_inf.begin(); inner_it != num_inf.end(); ++inner_it) {
-            count_temp++;
             if (*inner_it < *outer_it) {
                 count_smaller++;
             }
@@ -710,10 +686,14 @@ int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
     return n_min_new;
 }
 
-int main() {
-    double death(0),r1,r2,s_m_sum;
+int main(int argc, char* argv[]) {
+    std::string filename_in("Adjin_0.txt"), filename_out("Adjout_0.txt"),parametersname("parameters.csv");
+    if (argc>1){
+        filename_in=argv[1];
+        filename_out=argv[2];
+    }
+    double death(0.0);
     std::fstream Adjfile_in,Adjfile_out,parametersfile;
-    std::string filename_in("Adjin_0.txt"), filename_out("Adjout_0.txt"), parametersname("parameters.csv");
     auto parameter_list=read_parameters(parametersname,parametersfile);
     int N=std::get<0>(parameter_list),sims=std::get<1>(parameter_list),it=std::get<2>(parameter_list),
                 k=std::get<3>(parameter_list),jump=std::get<6>(parameter_list),network_number=std::get<9>(parameter_list),new_trajectory_bin=std::get<12>(parameter_list);
@@ -746,6 +726,7 @@ int main() {
     std::random_device rd;
     std::mt19937 gen(rd());
 
+    auto start_time = std::chrono::high_resolution_clock::now();
     //Read the python's network structure, what are the different connections
 
     read_in_neighborslist(N,filename_in,Adjlist_in,degrees_in, Adjfile_in,k_max);
@@ -762,8 +743,7 @@ int main() {
     double n_min = mf_solution,n_min_new;
     std::list<int>::iterator it_min_new;
     int Bins;
-    double death_sum(std::accumulate(death_vec.begin(),death_vec.end(),0.0)),weight_sum(std::accumulate(weights.begin(),weights.end(),0.0));
-
+    int relaxation_time=10;
     // End of variable defnitions
 
     networks_dynamics net_d(num_inf,weights,avec_sum,t,infected_node,infected_neighbors_in,
@@ -782,21 +762,26 @@ int main() {
             Nlimits[1]=n_min;
         }
         // Resample the paths so highly weighted simulations are split and low weighted simulations are unified
-        death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-        weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
-        std::cout << "Before Weights = " << weight_sum<<std::endl;
-        resample(steps_c,Nlimits,net_d);
-        death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
-        weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
-        std::cout<<"Weights: "<<weight_sum<<std::endl;
-        std::cout<<"Deaths: "<<death_sum<<std::endl;
-        std::cout << "Weights + Death = " << death_sum+weight_sum<<std::endl;
+        resample(steps_c,Nlimits,net_d,gen);
+        std::cout <<j<<std::endl;
     }
-//    double death_sum(std::accumulate(death_vec.begin(),death_vec.end(),0.0)),weight_sum(std::accumulate(weights.begin(),weights.end(),0.0));
-    death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
+    auto start_pos_relax=death_vec.begin();
+    std::advance(start_pos_relax,relaxation_time);
+    double death_sum = std::accumulate(start_pos_relax,death_vec.end(),0.0),weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
     double TAU = tau/( death_sum/death_vec.size() );
-    std::cout << "Extinction Time: " << TAU <<std::endl;
-    weight_sum = std::accumulate(net_d.weights.begin(),net_d.weights.end(),0.0);
-    std::cout << "Check if probablitiy is conserved: Weights + Death = " << death_sum+weight_sum<<std::endl;
+    std::cout << "MTE: " << TAU <<std::endl;
+    death_sum = std::accumulate(death_vec.begin(),death_vec.end(),0.0);
+    std::cout<< "Weights "<<weight_sum<< ", Deaths "<<death_sum<<std::endl;
+    std::cout << "Check if probability is conserved: Weights + Death = " << death_sum+weight_sum<<std::endl;
+    double theory_well_mixed_mte=(1.0 / Alpha) * sqrt(2.0 * M_PI / N) * (lam / pow((lam - 1), 2)) *
+                                 exp(N * (log(lam) + 1 / lam - 1));
+    std::cout << "Well-mixed numeric ratio: " << TAU/theory_well_mixed_mte << std::endl;
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
+    std::cout << "Program execution time: " << duration.count() << " seconds" << std::endl;
+    std::string deathname="death.csv", parmetername="output_parameters.csv";
+    write_output_data(deathname,death_vec);
+    std::vector<double> outputparameters={double(duration.count()),tau,TAU};
+    write_output_data(parmetername,outputparameters);
     return 0;
 }
