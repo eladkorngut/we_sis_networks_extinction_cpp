@@ -4,6 +4,7 @@ import os
 import rand_networks
 import networkx as nx
 import csv
+import pickle
 
 def export_parameters_to_csv(parameters):
     name_parameters,name_in,name_out = 'cparameters.txt', 'Adjin.txt' ,'Adjcout.txt'
