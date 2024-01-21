@@ -109,7 +109,9 @@ def job_to_cluster(foldername,parameters,Istar):
             parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta,dir_path])
             np.save('parameters_{}.npy'.format(i), parameters)
         infile = 'GNull_{}.pickle'.format(i)
-        nx.write_gpickle(G, infile)
+        with open(infile,'wb') as f:
+            pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
+        # nx.write_gpickle(G, infile)
         # os.system(dir_path + '/slurm.serjob ' + dir_path + './cwesis.exe {} {}'.format(name_Adj_in,name_Adj_out))
         os.system(dir_path + '/cwesis.exe {} {}'.format(name_Adj_in,name_Adj_out))
 
