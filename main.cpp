@@ -233,7 +233,6 @@ public:
         *i_t += sim_time;
         if (*i_num_inf<=0){
             double deleted_weights=*i_weights;
-//            return std::make_pair(*i_weights,erase_simulation(net_d));
             return std::make_pair(deleted_weights,erase_simulation(net_d));
         }
         return std::make_pair(0.0,*this);
@@ -370,7 +369,7 @@ void add_infected_node(int node,std::vector<int> &infected_nodes,std::vector<int
 void read_in_neighborslist(int N,std::string& filename,std::vector<std::vector<int>> &Adjlist,std::vector<int> &degrees,std::fstream &Adjfile,int &k_max) {
     // Read network data from python files
 
-    Adjfile.open("/home/elad/we_sis_networks_extinction_cpp/"+filename);
+    Adjfile.open(filename);
     std::string line;
     std::stringstream ss;
     int count_degree = 0;
@@ -383,10 +382,8 @@ void read_in_neighborslist(int N,std::string& filename,std::vector<std::vector<i
             degrees[count_degree] = std::stoi(word);
             if (degrees[count_degree]>k_max)
                 k_max = degrees[count_degree];
-            while (getline(ss, word, ',')) {
+            while (getline(ss, word, ','))
                 Adjlist[count_degree].push_back(std::stoi(word));
-
-            }
             count_degree++;
         }
     }
@@ -523,11 +520,11 @@ std::pair<std::vector<std::deque<simulation_data>>,std::vector<double> > create_
         if (bins[pos].empty() == true) {
             bins[pos].push_back(sim_data);
         } else {
-            if (*bins[pos].front().i_weights > (*sim_data.i_weights)) {
+            if (*bins[pos].front().i_weights > (*sim_data.i_weights))
                 bins[pos].push_front(sim_data);
-            } else if (*bins[pos].back().i_weights < (*sim_data.i_weights)) {
+            else if (*bins[pos].back().i_weights < (*sim_data.i_weights))
                 bins[pos].push_back(sim_data);
-            } else {
+            else {
                 for (auto it_we_r = bins[pos].begin(); it_we_r != bins[pos].end(); ++it_we_r) {
                     auto next_sim = it_we_r;
                     ++next_sim;
@@ -589,7 +586,8 @@ std::deque<simulation_data>::iterator randomly_select_simulation(std::deque<simu
     double weight_rand=sim_dist(gen),weight_sum=0.0;
     for (auto it_sim=consmall.begin();it_sim!=end_simulation;++it_sim){
         weight_sum+=*it_sim->i_weights;
-        if (weight_sum>=weight_rand){return it_sim;}
+        if (weight_sum>=weight_rand)
+            return it_sim;
     }
     return end_simulation;
 }
@@ -622,11 +620,10 @@ void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d,s
     for (int i = 0; i < bins.size(); i++) {
         for (auto it_sim = bins[i].begin(); it_sim != bins[i].end(); ++it_sim) {
             split = ( *it_sim->i_weights*steps_c/2)/(wtot[i]);
-        if (split > 1) {
+        if (split > 1)
             duplicate_bin(split,it_sim,net_d);
-//            steps_c += std::ceil(split)-1;
-            }
-        else if (4*split<1) {consmall[i].push_back(*it_sim);}
+        else if (4*split<1)
+            consmall[i].push_back(*it_sim);
         }
     }
 
@@ -644,7 +641,8 @@ void resample(int steps_c,std::deque<double> &Nlimits,networks_dynamics &net_d,s
             }
             ++it_sim_unified;
         }
-        if (!consmall[i].empty()){unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d,gen);}
+        if (!consmall[i].empty())
+            unify_simulations(consmall[i],it_sim_unified,wtot_sum,net_d,gen);
     }
 }
 
@@ -687,10 +685,11 @@ int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
 }
 
 int main(int argc, char* argv[]) {
-    std::string filename_in("Adjin_0.txt"), filename_out("Adjout_0.txt"),parametersname("parameters.csv");
+    std::string filename_in("Adjin_0.txt"), filename_out("Adjout_0.txt"),parametersname("cparameters.txt");
     if (argc>1){
         filename_in=argv[1];
         filename_out=argv[2];
+        parametersname = argv[3];
     }
     double death(0.0);
     std::fstream Adjfile_in,Adjfile_out,parametersfile;
@@ -742,7 +741,6 @@ int main(int argc, char* argv[]) {
 
     double n_min = mf_solution,n_min_new;
     std::list<int>::iterator it_min_new;
-    int Bins;
     int relaxation_time=10;
     // End of variable defnitions
 
@@ -781,7 +779,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Program execution time: " << duration.count() << " seconds" << std::endl;
     std::string deathname="death.csv", parmetername="output_parameters.csv";
     write_output_data(deathname,death_vec);
-    std::vector<double> outputparameters={double(duration.count()),tau,TAU};
+    std::vector<double> outputparameters={double(duration.count()),double(tau),TAU};
     write_output_data(parmetername,outputparameters);
     return 0;
 }
