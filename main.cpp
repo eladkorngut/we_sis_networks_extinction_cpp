@@ -269,7 +269,7 @@ std::tuple<int,int,int,int,double,double,double,double,double,int,double,double,
     int N,sims,it,k,jump,network_number,new_trajectory_bin;
     double x,lam,Alpha,Beta,tau,mf_solution;
     std::string prog,dir_path;
-    parameters_file.open("/home/elad/we_sis_networks_extinction_cpp/cparameters.txt");
+    parameters_file.open(filename);
     while (getline(parameters_file, line)) {
         ss.clear();
         ss.str(line);
@@ -779,7 +779,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Program execution time: " << duration.count() << " seconds" << std::endl;
     std::string deathname="death.csv", parmetername="output_parameters.csv";
     write_output_data(deathname,death_vec);
-    std::vector<double> outputparameters={double(duration.count()),double(tau),TAU};
+    std::vector<double> outputparameters={double(duration.count()),double(network_number),TAU};
     write_output_data(parmetername,outputparameters);
     return 0;
 }
