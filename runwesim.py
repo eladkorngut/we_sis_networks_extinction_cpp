@@ -1,9 +1,6 @@
-import pickle
 import numpy as np
 import os
-# import we_sis_network_extinction
 import rand_networks
-import networkx as nx
 import csv
 import pickle
 
@@ -124,9 +121,9 @@ def job_to_cluster(foldername,parameters,Istar):
         # nx.write_gpickle(G, infile)
         export_network_to_csv(G, i)
         export_parameters_to_csv(parameters,i)
-        path_adj_in = dir_path + 'Adjin_{}.txt'.format(i)
-        path_adj_out = dir_path + 'Adjout_{}.txt'.format(i)
-        path_parameters = dir_path + 'cparameters_{}.txt'.format(i)
+        path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
+        path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
+        path_parameters = data_path + 'cparameters_{}.txt'.format(i)
         parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
         os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
         # os.system('{} {} {} {}'.format(program_path,path_adj_in,path_adj_out,path_parameters))
