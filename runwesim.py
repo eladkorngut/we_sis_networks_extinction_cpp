@@ -43,25 +43,27 @@ def export_network_to_csv(G,netname):
             joint = np.concatenate(([degree],outgoing_neighbors),axis=0)
             outgoing_writer.writerow(joint)
 
+
 def act_as_main(foldername,parameters,Istar):
     # This program will run the we_sis_network_extinction.py on the laptop\desktop
-    program_path = '/home/elad/we_sis_networks_extinction_cpp/cwesis.exe'
+    program_path = os.path.dirname(os.path.realpath(__file__)) +'/cwesis.exe'
     os.mkdir(foldername)
     os.chdir(foldername)
-    dir_path = os.path.dirname(os.path.realpath(__file__)) +'/' + foldername +'/'
+    data_path = os.getcwd() +'/'
+    # dir_path = os.path.dirname(os.path.realpath(__file__)) +'/' + foldername +'/'
     N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
     if prog == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))), int(int(k) * (1 + float(eps_din))), int(
             int(k) * (1 + float(eps_dout)))
         Beta = float(Beta_avg) / (1 + float(eps_din) * float(eps_dout))  # This is so networks with different std will have the reproduction number
-        parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,number_of_networks,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path])
+        parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,number_of_networks,tau,Istar,new_trajcetory_bin,prog,data_path])
         np.save('parameters.npy',parameters)
     # dir_path = os.path.dirname(os.path.realpath(__file__))
     for i in range(int(number_of_networks)):
         if prog=='bd':
             G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
-            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path])
+            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,prog,data_path])
         else:
             G = rand_networks.configuration_model_directed_graph(prog, float(eps_din), float(eps_dout), int(k), int(N))
             k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
@@ -69,7 +71,7 @@ def act_as_main(foldername,parameters,Istar):
             eps_in_graph = np.std([G.in_degree(n) for n in G.nodes()])/k_avg_graph
             eps_out_graph = np.std([G.out_degree(n) for n in G.nodes()])/k_avg_graph
             Beta = Beta_graph / (1 + np.sign(float(eps_din))*eps_in_graph * np.sign(float(eps_dout))* eps_out_graph)
-            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path])
+            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,prog,data_path])
             np.save('parameters_{}.npy'.format(i), parameters)
         infile = 'GNull_{}.pickle'.format(i)
         with open(infile,'wb') as f:
@@ -77,9 +79,9 @@ def act_as_main(foldername,parameters,Istar):
         # nx.write_gpickle(G, infile)
         export_network_to_csv(G, i)
         export_parameters_to_csv(parameters,i)
-        path_adj_in = dir_path + 'Adjin_{}.txt'.format(i)
-        path_adj_out = dir_path + 'Adjout_{}.txt'.format(i)
-        path_parameters = dir_path + 'cparameters_{}.txt'.format(i)
+        path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
+        path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
+        path_parameters = data_path + 'cparameters_{}.txt'.format(i)
         # os.system(dir_path + '/slurm.serjob ' + dir_path + './cwesis.exe {} {}'.format(name_Adj_in,name_Adj_out))
         os.system('{} {} {} {}'.format(program_path,path_adj_in,path_adj_out,path_parameters))
 
@@ -87,12 +89,12 @@ def act_as_main(foldername,parameters,Istar):
 def job_to_cluster(foldername,parameters,Istar):
     # This function submit jobs to the cluster with the following program keys:
     # bd: creates a bimodal directed networks and find its mean time to extinction
-    dir_path = '/home/eladko/cpp_we_sis_extinction_project/we_sis_networks_extinction_cpp/'
+    dir_path = os.path.dirname(os.path.realpath(__file__))
     slurm_path = dir_path +'slurm.serjob'
     program_path = dir_path +'cwesis.exe'
     os.mkdir(foldername)
     os.chdir(foldername)
-    data_path = os.path.dirname(os.path.realpath(__file__)) +'/' + foldername +'/'
+    data_path = os.getcwd() +'/'
     N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
     if prog == 'bd':
         # G = nx.complete_graph(N)
@@ -151,8 +153,6 @@ if __name__ == '__main__':
     tau = 1.0
     new_trajcetory_bin = 5
     prog = 'bd'
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path = '/home/elad/we_sis_networks_extinction_cpp/python'
     parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
     graphname  = 'GNull'
     foldername = 'prog_{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}'.format(prog,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,eps_din,eps_dout)
@@ -163,6 +163,6 @@ if __name__ == '__main__':
 
 
     # What's the job to run either on the cluster or on the laptop
-    job_to_cluster(foldername,parameters,Istar)
-    # act_as_main(foldername,parameters,Istar)
+    # job_to_cluster(foldername,parameters,Istar)
+    act_as_main(foldername,parameters,Istar)
 
