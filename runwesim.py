@@ -90,8 +90,8 @@ def job_to_cluster(foldername,parameters,Istar):
     # This function submit jobs to the cluster with the following program keys:
     # bd: creates a bimodal directed networks and find its mean time to extinction
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    slurm_path = dir_path +'slurm.serjob'
-    program_path = dir_path +'cwesis.exe'
+    slurm_path = dir_path +'/slurm.serjob'
+    program_path = dir_path +'/cwesis.exe'
     os.mkdir(foldername)
     os.chdir(foldername)
     data_path = os.getcwd() +'/'
@@ -163,6 +163,6 @@ if __name__ == '__main__':
 
 
     # What's the job to run either on the cluster or on the laptop
-    # job_to_cluster(foldername,parameters,Istar)
-    act_as_main(foldername,parameters,Istar)
+    job_to_cluster(foldername,parameters,Istar)
+    # act_as_main(foldername,parameters,Istar)
 
