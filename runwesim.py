@@ -3,6 +3,7 @@ import os
 import rand_networks
 import csv
 import pickle
+import networkx as nx
 
 def export_parameters_to_csv(parameters,network_number):
     name_parameters = 'cparameters_{}.txt'.format(network_number)
@@ -108,6 +109,9 @@ def job_to_cluster(foldername,parameters,Istar):
         if prog=='bd':
             G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
             parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])
+        elif prog=='h':
+            G = nx.random_regular_graph(k, N)
+            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])            # Creates a random graphs with k number of neighbors
         else:
             G = rand_networks.configuration_model_directed_graph(prog, float(eps_din), float(eps_dout), int(k), int(N))
             k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
@@ -134,32 +138,32 @@ def job_to_cluster(foldername,parameters,Istar):
 
 if __name__ == '__main__':
     # Parameters for the network to work
-    N = 100 # number of nodes
-    lam = 1.6 # The reproduction number
+    N = 1000 # number of nodes
+    lam = 1.12 # The reproduction number
     number_of_networks = 10
-    sims = 200 # Number of simulations at each step
+    sims = 500 # Number of simulations at each step
     # k = N # Average number of neighbors for each node
-    k = 50 # Average number of neighbors for each node
+    k = 200 # Average number of neighbors for each node
     x = 0.2 # intial infection percentage
     Num_inf = int(x*N) # Number of initially infected nodes
     it = 70
     jump = 5
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = 0.1,0.1 # The normalized std (second moment divided by the first) of the network
+    eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 3
     # tau = 1/(Num_inf*Alpha+N*Beta*k)
     tau = 1.0
-    new_trajcetory_bin = 5
-    prog = 'bd'
+    new_trajcetory_bin = 15
+    prog = 'h'
     parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
     graphname  = 'GNull'
     foldername = 'prog_{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}'.format(prog,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,eps_din,eps_dout)
-    y1star=(-2*eps_din*(1 + eps_dout*eps_din)+ lam*(-1 + eps_din)*(1 + (-1 + 2*eps_dout)*eps_din)+ np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(-1 +eps_dout)*(-1 +eps_din)*eps_din)
-    y2star=(lam + eps_din*(-2 + 2*lam +lam*eps_din+ 2*eps_dout*(lam +(-1 + lam)*eps_din)) -np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(1 +eps_dout)*eps_din*(1 + eps_din))
-    Istar = (y1star +y2star)*N
-    # Istar = (1 - 1/lam) * N
+    # y1star=(-2*eps_din*(1 + eps_dout*eps_din)+ lam*(-1 + eps_din)*(1 + (-1 + 2*eps_dout)*eps_din)+ np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(-1 +eps_dout)*(-1 +eps_din)*eps_din)
+    # y2star=(lam + eps_din*(-2 + 2*lam +lam*eps_din+ 2*eps_dout*(lam +(-1 + lam)*eps_din)) -np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(1 +eps_dout)*eps_din*(1 + eps_din))
+    # Istar = (y1star +y2star)*N
+    Istar = (1 - 1/lam) * N
 
 
     # What's the job to run either on the cluster or on the laptop
