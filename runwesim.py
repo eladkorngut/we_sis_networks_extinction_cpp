@@ -103,7 +103,7 @@ def job_to_cluster(foldername,parameters,Istar):
         Beta = float(Beta_avg) / (1 + float(eps_din) * float(eps_dout))  # This is so networks with different std will have the reproduction number
         parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,number_of_networks,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path])
         np.save('parameters.npy',parameters)
-    # dir_path = os.path.dirname(os.path.realpath(__file__))
+    # pragma omp parallel for
     for i in range(int(number_of_networks)):
         if prog=='bd':
             G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
