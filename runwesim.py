@@ -17,15 +17,23 @@ def export_parameters_to_csv(parameters,network_number):
 
 def export_network_to_csv(G,netname):
     # Open a CSV file for writing incoming neighbors
+
+    # Check if the graph is directed
+    is_directed = G.is_directed()
+
     with open('Adjin_{}.txt'.format(netname), 'w', newline='') as incoming_file:
         # Create a CSV writer
         incoming_writer = csv.writer(incoming_file)
         # Iterate over all nodes in the graph
         for node in np.sort(G):
             # Get the incoming neighbors of the current node
-            incoming_neighbors = list(G.predecessors(node))
-            # Get the degree of the current node
-            degree = G.in_degree[node]
+            if is_directed:
+                incoming_neighbors = list(G.predecessors(node))
+                # Get the degree of the current node
+                degree = G.in_degree[node]
+            else:
+                incoming_neighbors = list(G.neighbors(node))  # All neighbors for undirected graph
+                degree = G.degree[node]
             # Write a row to the CSV file for the current node
             joint = np.concatenate(([degree],incoming_neighbors),axis=0)
             incoming_writer.writerow(joint)
@@ -37,9 +45,13 @@ def export_network_to_csv(G,netname):
         # Iterate over all nodes in the graph
         for node in np.sort(G):
             # Get the incoming neighbors of the current node
-            outgoing_neighbors = list(G.successors(node))
-            # Get the degree of the current node
-            degree = G.out_degree[node]
+            if is_directed:
+                outgoing_neighbors = list(G.successors(node))
+                # Get the degree of the current node
+                degree = G.out_degree[node]
+            else:
+                outgoing_neighbors = list(G.neighbors(node))  # All neighbors for undirected graph
+                degree = G.degree[node]
             # Write a row to the CSV file for the current node
             joint = np.concatenate(([degree],outgoing_neighbors),axis=0)
             outgoing_writer.writerow(joint)
