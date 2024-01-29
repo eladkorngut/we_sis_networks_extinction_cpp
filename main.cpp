@@ -687,7 +687,7 @@ int find_new_min(std::list<int>& num_inf,int new_trajectory_bin){
 int main(int argc, char* argv[]) {
     std::string filename_in("/home/elad/we_sis_networks_extinction_cpp/Adjin_0.txt"),
     filename_out("/home/elad/we_sis_networks_extinction_cpp/Adjout_0.txt"),
-    parametersname("/home/elad/we_sis_networks_extinction_cpp/cparameters.txt");
+    parametersname("/home/elad/we_sis_networks_extinction_cpp/cparameters_0.txt");
     if (argc>1){
         filename_in=argv[1];
         filename_out=argv[2];
@@ -749,6 +749,8 @@ int main(int argc, char* argv[]) {
     networks_dynamics net_d(num_inf,weights,avec_sum,t,infected_node,infected_neighbors_in,
                             infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI);
     network_topology net_t(Alpha,Beta,k_max,degrees_in,degrees_out,Adjlist_in,Adjlist_out);
+
+    # pragma omp parallel for //code for parallelization of jobs on cluster
     for(int j=0;j<it;j++){
         // Run Gillespie's time step and update the number of deaths and net_d
         death = GillespieMC(tau,gen,uniform_dist,exponential_dist,net_d,net_t);
