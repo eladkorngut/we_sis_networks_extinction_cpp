@@ -1,17 +1,48 @@
 #!/bin/bash
-export partition=core
-export prog=${*}
+
+if [ "$#" -ne 5 ]; then
+    echo "Usage: $0 program1 program2"
+    exit 1
+fi
+
+export partition=socket
+export netcraft=$1
+export cwesis=$2
+export adj_in=$3
+export adj_out=$4
+export parameters=$5
 export submit_script=submit.$$
 export JOB_NAME=${PWD##*/}
+
+# Submit the createn network program
 cat > $submit_script << EOF
 #!/bin/bash
 #
-#SBATCH --job-name=$JOB_NAME
-#SBATCH --output=$JOB_NAME.%j.txt
+#SBATCH --job-name=${JOB_NAME}_net
+#SBATCH --output=${JOB_NAME}_net.%j.txt
 #SBATCH --partition=$partition
 #SBATCH --ntasks=1
-$prog
+#SBATCH -n 1 # 1 cores
+#SBATCH --cpus-per-task 16
+$netcraft $parameters
 rm  $submit_script
 EOF
 
 sbatch $submit_script
+
+# Submit gillespie algorithm program
+cat > $submit_script << EOF
+#!/bin/bash
+#
+#SBATCH --job-name=${JOB_NAME}_gillespie
+#SBATCH --output=${JOB_NAME}_gillespie.%j.txt
+#SBATCH --partition=$partition
+#SBATCH --ntasks=1
+#SBATCH -n 1 # 1 cores
+#SBATCH --cpus-per-task 16
+$cwesis $adj_in $adj_out $parameters
+rm  $submit_script
+EOF
+
+sbatch $submit_script
+
