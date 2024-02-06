@@ -59,39 +59,37 @@ def export_network_to_csv(G,netname):
             outgoing_writer.writerow(joint)
 
 
-def create_network():
-    parameters = np.load(sys.argv[1])
-    N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,network_type,Beta_avg,Istar = parameters
+def create_network(file_name):
+    parameters = np.load(file_name)
+    N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,network_type,Beta_avg,Istar,net_num = parameters
     if network_type == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))),\
                                        int(int(k) * (1 + float(eps_din))), int(int(k) * (1 + float(eps_dout)))
         Beta = float(Beta_avg) / (1 + float(eps_din) * float(eps_dout))  # This is so networks with different std will have the reproduction number
-        parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,number_of_networks,tau,Istar,new_trajcetory_bin,network_type,eps_din,eps_dout])
-        np.save('parameters.npy',parameters)
-    for i in range(int(number_of_networks)):
-        if network_type=='bd':
-            G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
-            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,network_type,eps_din,eps_dout])
-        elif network_type=='h':
-            G = nx.random_regular_graph(int(k), int(N))
-            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta_avg,i,tau,Istar,new_trajcetory_bin,network_type,eps_din,eps_dout])            # Creates a random graphs with k number of neighbors
-        else:
-            G = rand_networks.configuration_model_directed_graph(network_type, float(eps_din), float(eps_dout), int(k), int(N))
-            k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
-            Beta_graph = float(lam)/k_avg_graph
-            eps_in_graph = np.std([G.in_degree(n) for n in G.nodes()])/k_avg_graph
-            eps_out_graph = np.std([G.out_degree(n) for n in G.nodes()])/k_avg_graph
-            Beta = Beta_graph / (1 + np.sign(float(eps_din))*eps_in_graph * np.sign(float(eps_dout))* eps_out_graph)
-            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,network_type,dir_path,eps_in_graph,eps_out_graph])
-            np.save('parameters_{}.npy'.format(i), parameters)
-        infile = 'GNull_{}.pickle'.format(i)
-        with open(infile,'wb') as f:
-            pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
-        # nx.write_gpickle(G, infile)
-        export_network_to_csv(G, i)
-        export_parameters_to_csv(parameters,i)
+        parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,file_name,tau,Istar,new_trajcetory_bin,network_type,eps_din,eps_dout,net_num])
+        G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
+    elif network_type=='h':
+        G = nx.random_regular_graph(int(k), int(N))
+        parameters = np.array([N, sims, it, k, x, lam, jump, Alpha, Beta_avg, file_name, tau, Istar, new_trajcetory_bin, network_type, eps_din,eps_dout,net_num])  # Creates a random graphs with k number of neighbors
+    else:
+        G = rand_networks.configuration_model_directed_graph(network_type, float(eps_din), float(eps_dout), int(k),
+                                                             int(N))
+        k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
+        Beta_graph = float(lam) / k_avg_graph
+        eps_in_graph = np.std([G.in_degree(n) for n in G.nodes()]) / k_avg_graph
+        eps_out_graph = np.std([G.out_degree(n) for n in G.nodes()]) / k_avg_graph
+        Beta = Beta_graph / (1 + np.sign(float(eps_din)) * eps_in_graph * np.sign(float(eps_dout)) * eps_out_graph)
+        parameters = np.array([N, sims, it, k, x, lam, jump, Alpha, Beta, file_name, tau, Istar, new_trajcetory_bin,
+                               network_type, eps_in_graph,eps_out_graph,net_num])
+    np.save(file_name, parameters)
+    infile = 'GNull_{}.pickle'.format(net_num)
+    with open(infile, 'wb') as f:
+        pickle.dump(G, f, pickle.HIGHEST_PROTOCOL)
+    export_network_to_csv(G, net_num)
+    export_parameters_to_csv(parameters,net_num)
 
 
 if __name__ == '__main__':
-    create_network()
+    file_name = sys.argv[1]
+    create_network(file_name)

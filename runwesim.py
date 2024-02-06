@@ -19,12 +19,16 @@ def par_paths(net_num):
     return path_adj_in,path_adj_out,path_parameters
 
 
-def run_program(parameters,foldername):
-    N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg,Istar = parameters
+def run_program(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
+                tau,jump,new_trajcetory_bin,foldername,Istar):
     cwesis_path,netcraft_path,slurm_path=build_folder(foldername)
-    for i in range(number_of_networks):
-        path_adj_in,path_adj_out,path_parameters = par_paths(i)
-        os.system('{} {} {} {} {}'.format(slurm_path,netcraft_path,cwesis_path,path_adj_in,path_adj_out,path_parameters))
+    for n,l,net,degree,init,inf,gamma,b,epsin,epsout,net_type,s,rxt,runs,t,j,cutoff,f,avg_inf in zip(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
+                tau,jump,new_trajcetory_bin,foldername,Istar):
+        for i in range(number_of_networks):
+            path_adj_in,path_adj_out,path_parameters = par_paths(i)
+            parameters = np.array([n,s,runs,degree,init,l,j,gamma,b,t,avg_inf,cutoff,net_type,epsin,epsout,net])
+            np.save('parameters_{}.npy'.format(i), parameters)
+            os.system('{} {} {} {} {}'.format(slurm_path,netcraft_path,cwesis_path,path_adj_in,path_adj_out,path_parameters))
 
 
 if __name__ == '__main__':
@@ -56,10 +60,7 @@ if __name__ == '__main__':
     # Istar = (y1star +y2star)*N
     Istar = (1 - 1/lam) * N
 
-    parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,network_type,Beta_avg,Istar])
-    np.save('parameters.npy', parameters)
-
-
     # Run the slurm program
-    run_program(parameters)
+    run_program(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
+                tau,jump,new_trajcetory_bin,foldername,Istar)
 
