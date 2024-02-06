@@ -24,9 +24,9 @@ def run_program(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_
     cwesis_path,netcraft_path,slurm_path=build_folder(foldername)
     for n,l,net,degree,init,inf,gamma,b,epsin,epsout,net_type,s,rxt,runs,t,j,cutoff,f,avg_inf in zip(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
                 tau,jump,new_trajcetory_bin,foldername,Istar):
-        for i in range(number_of_networks):
+        for i in range(net):
             path_adj_in,path_adj_out,path_parameters = par_paths(i)
-            parameters = np.array([n,s,runs,degree,init,l,j,gamma,b,t,avg_inf,cutoff,net_type,epsin,epsout,net])
+            parameters = np.array([n,s,runs,degree,init,l,j,gamma,b,t,avg_inf,cutoff,net_type,epsin,epsout,i])
             np.save('parameters_{}.npy'.format(i), parameters)
             os.system('{} {} {} {} {}'.format(slurm_path,netcraft_path,cwesis_path,path_adj_in,path_adj_out,path_parameters))
 
