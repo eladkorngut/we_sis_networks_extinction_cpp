@@ -1,48 +1,54 @@
 import numpy as np
 import os
 
-def build_folder(foldername):
+def program_paths():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     cwesis_path = dir_path +'/cwesis.exe'
     netcraft_path = dir_path +'/netcraft.py'
     slurm_path = dir_path + '/slurm.serjob'
-    os.mkdir(foldername)
-    os.chdir(foldername)
     return cwesis_path,netcraft_path,slurm_path
 
 
 def par_paths(net_num):
-    data_path = os.getcwd() +'/'
+    data_path = os.getcwd() + '/'
     path_adj_in = data_path + 'Adjin_{}.txt'.format(net_num)
     path_adj_out = data_path + 'Adjout_{}.txt'.format(net_num)
     path_parameters = data_path + 'cparameters_{}.txt'.format(net_num)
     return path_adj_in,path_adj_out,path_parameters
 
 
-def run_program(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
-                tau,jump,new_trajcetory_bin,foldername,Istar):
-    cwesis_path,netcraft_path,slurm_path=build_folder(foldername)
-    for n,l,net,degree,init,inf,gamma,b,epsin,epsout,net_type,s,rxt,runs,t,j,cutoff,f,avg_inf in zip(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
-                tau,jump,new_trajcetory_bin,foldername,Istar):
+def run_program(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,
+                it,tau,jump,new_trajcetory_bin,Istar):
+    cwesis_path, netcraft_path, slurm_path = program_paths()
+    path_all_results = os.getcwd()
+    for n,l,net,degree,inf,gamma,b,epsin,epsout,net_type,s,rxt,runs,t,j,ninf,cutoff,avg_inf in zip(N,lam,
+               number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
+                tau,jump,new_trajcetory_bin,Istar):
+        os.chdir(path_all_results)
+        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_epsin_{}_epsout_{}'.format(
+            net_type, n, degree, l, t, runs, j, cutoff, s, epsin, epsout)
+        os.mkdir(foldername)
+        os.chdir(foldername)
+        data_path = os.getcwd()
         for i in range(net):
             path_adj_in,path_adj_out,path_parameters = par_paths(i)
-            parameters = np.array([n,s,runs,degree,init,l,j,gamma,b,t,avg_inf,cutoff,net_type,epsin,epsout,i])
+            parameters = np.array([n,s,runs,degree,inf,l,j,ninf,gamma,b,net,t,cutoff,net_type,epsin,epsout,avg_inf])
             np.save('parameters_{}.npy'.format(i), parameters)
             os.system('{} {} {} {} {}'.format(slurm_path,netcraft_path,cwesis_path,path_adj_in,path_adj_out,path_parameters))
-
+            os.chdir(data_path)
 
 if __name__ == '__main__':
     # Network parameters
-    N = np.array([100]) # number of nodes
-    lam = np.array([1.6]) # The reproduction number
-    number_of_networks = np.array([10])
-    k = np.array([50]) # Average number of neighbors for each node
-    x = np.array([0.2]) # intial infection percentage
-    Num_inf = np.array([x*N]) # Number of initially infected nodes
-    Alpha = np.array([1.0]) # Recovery rate
+    N = np.array([100,200]) # number of nodes
+    lam = np.array([1.6,1.6]) # The reproduction number
+    number_of_networks = np.array([10,10])
+    k = np.array([50,50]) # Average number of neighbors for each node
+    eps_din,eps_dout = np.array([0.0,0.0]),np.array([0.0,0.0]) # The normalized std (second moment divided by the first) of the network
+    x = 0.2*np.ones(len(N)) # intial infection percentage
+    Num_inf = x*N # Number of initially infected nodes
+    Alpha = 1.0*np.ones(len(N)) # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = np.array([0.0]),np.array([0.0]) # The normalized std (second moment divided by the first) of the network
-    network_type = 'h'
+    network_type = np.repeat('h',len(N))
 
     # WE simulation parameters
     sims = 200*np.ones(len(N)) # Number of simulations at each step
@@ -51,7 +57,6 @@ if __name__ == '__main__':
     tau = 1.0*np.ones(len(N))
     jump = 15*np.ones(len(N))
     new_trajcetory_bin = 15*np.ones(len(N))
-    foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}'.format(network_type,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,eps_din,eps_dout)
 
 
     # Number of infected fixed point
@@ -62,5 +67,5 @@ if __name__ == '__main__':
 
     # Run the slurm program
     run_program(N,lam,number_of_networks,k,x,Num_inf,Alpha,Beta_avg,eps_din,eps_dout,network_type,sims,relaxation_time,it,
-                tau,jump,new_trajcetory_bin,foldername,Istar)
+                tau,jump,new_trajcetory_bin,Istar)
 
