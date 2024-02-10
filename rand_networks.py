@@ -13,7 +13,7 @@ from itertools import chain
 from scipy.stats import norm
 from scipy.stats import gamma
 from scipy.stats import uniform
-
+from scipy.stats import rv_discrete
 import json
 
 
@@ -641,6 +641,49 @@ def configuration_model_directed_graph(
     return G
 
 
+def plot_configuration_model_powerlaw(G,a,b,n,custom_dist):
+    degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
+    plt.hist(degree_sequence, bins=np.arange(1, 100)-0.5, density=True, alpha=0.6, color='y', label='Histogram of Generated degree')
+    plt.title('Power-law Degree Distribution with k={}, a={} and N={}'.format(round(np.mean(degree_sequence),2),round(a,2),n))
+    plt.xlabel('Degree (k)')
+    plt.ylabel('Probability')
+    x = np.arange(1, 100)
+    plt.plot(x, custom_dist.pmf(x,a=a, b=b), 'b-', label='PMF',linewidth=2)
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('power_law_graph.png',dpi=500)
+    plt.show()
+
+
+def configuration_model_powerlaw(a,kavg,n):
+    class CustomDistribution(rv_discrete):
+        def _pmf(self, k, a, b):
+            return b * a / (1 + b * k) ** (a + 1)
+
+    def find_a_binary_search(kavg,n,alpha_org, custom_dist,b):
+        mid_mean = np.mean(custom_dist.rvs(a=a, b=b, size=n))
+        high,low = alpha_org,alpha_org-2
+        while np.abs(mid_mean-kavg)/kavg > 0.01:
+            mid = (low + high) / 2
+            mid_mean = np.mean(custom_dist.rvs(a=mid,b=b,size=n))
+            if mid_mean > kavg:
+                low = mid
+            else:
+                high=mid
+        return (low+high)/2
+
+    b = 1/(kavg*(a-1))
+    custom_dist =CustomDistribution()
+    a=find_a_binary_search(kavg,n,a,custom_dist,b)
+    sequence = custom_dist.rvs(a=a,b=b,size=n)
+    if (np.sum(sequence)%2!=0):
+        rand_bin = random.randint(1, n)
+        sequence[rand_bin]=sequence[rand_bin]+1
+    G = nx.configuration_model(sequence)
+    G = nx.Graph(G)
+    G.remove_edges_from(nx.selfloop_edges(G))
+    return G,a,b
+
 def configuration_model_undirected_graph(epsilon,avg_degree,N):
     d=np.random.normal(avg_degree, epsilon * avg_degree, N).astype(int)
     if np.sum(d)%2!=0:
@@ -679,8 +722,8 @@ def jason_graph(file_name):
 
 
 if __name__ == '__main__':
-    N,k=400,100
-    interaction_strength = 100.5
+    # N,k=400,100
+    # interaction_strength = 100.5
     # d1_in, d1_out, d2_in, d2_out = 45,45,55,55
     # beta_inf,beta_sus = 0.1,0.1
     # susceptibility_avg = 1.0
@@ -747,17 +790,36 @@ if __name__ == '__main__':
     # temp=nx.utils.discrete_sequence(1000,degree)
     # v_in,v_out=[],[]
     # eps_in,eps_out=[0.1,0.1,0.1,0.1,0.1,0.1],[0.05,0.1,0.15,0.2,0.25,0.3]
-    eps_in,eps_out=[0.5],[0.0]
-    for ein,eout in zip(eps_in,eps_out):
-        G=configuration_model_directed_graph('gauss_c', ein, eout, 50, 400)
-        degree_in=[G.in_degree(n) for n in G.nodes()]
-        degree_out=[G.out_degree(n) for n in G.nodes()]
-        # v_in.append(np.std(degree_in)/np.mean(degree_in))
-        # v_out.append(np.std(degree_out)/np.mean(degree_out))
-        # plt.hist((degree_in,degree_out),bins=500)
-        plt.hist(degree_in, bins=100)
-        # plt.hist((degree_out),bins=400)
-        plt.show()
+
+    # class CustomDistribution(rv_discrete):
+    #     def _pmf(self, k, a, b):
+    #         return b * a / (1 + b * k) ** (a + 1)
+    # custom_dist =CustomDistribution
+    a,k,n=12.0,20,10000
+    # b=1/(k*(a-1))
+    # a_for_graph =3.37
+    # a_for_graph =10.0
+    G,a,b= configuration_model_powerlaw(a,k,n)
+    # plot_configuration_model_powerlaw(G,a,b,n,custom_dist)
+    # degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
+    # plt.hist(degree_sequence, bins=np.arange(1, 50)-0.5, density=True, alpha=0.6, color='g', label='Histogram of Generated degree')
+    # plt.title('Power-law Degree Distribution')
+    # plt.xlabel('Degree (k)')
+    # plt.ylabel('Probability')
+    # x = np.arange(1, 50)
+    # plt.plot(x, custom_dist.pmf(x,a=a, b=b), 'ro-', label='PMF', markersize=8)
+    # plt.show()
+    # eps_in,eps_out=[0.5],[0.0]
+    # for ein,eout in zip(eps_in,eps_out):
+    #     G=configuration_model_directed_graph('gauss_c', ein, eout, 50, 400)
+    #     degree_in=[G.in_degree(n) for n in G.nodes()]
+    #     degree_out=[G.out_degree(n) for n in G.nodes()]
+    #     # v_in.append(np.std(degree_in)/np.mean(degree_in))
+    #     # v_out.append(np.std(degree_out)/np.mean(degree_out))
+    #     # plt.hist((degree_in,degree_out),bins=500)
+    #     plt.hist(degree_in, bins=100)
+    #     # plt.hist((degree_out),bins=400)
+    #     plt.show()
     # print(*v_in, sep = ", ")
     # print(*v_out, sep = ", ")
     # degrees_in = [G.in_degree(n) for n in G.nodes()]
@@ -785,6 +847,8 @@ if __name__ == '__main__':
 # G=random_bimodal_graph(d1 , d2, N, seed=None)
 # export_network(G)
 # draw_basic_nx_g(G)
+
+
 
 
 

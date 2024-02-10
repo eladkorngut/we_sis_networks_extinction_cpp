@@ -750,7 +750,7 @@ int main(int argc, char* argv[]) {
                             infected_neighbors_out,sigma,s_m,positions,susceptible_nodes,SI);
     network_topology net_t(Alpha,Beta,k_max,degrees_in,degrees_out,Adjlist_in,Adjlist_out);
 
-    # pragma omp parallel for //code for parallelization of jobs on cluster
+//    # pragma omp parallel for //code for parallelization of jobs on cluster
     for(int j=0;j<it;j++){
         // Run Gillespie's time step and update the number of deaths and net_d
         death = GillespieMC(tau,gen,uniform_dist,exponential_dist,net_d,net_t);

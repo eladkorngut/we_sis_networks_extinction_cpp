@@ -57,14 +57,17 @@ def export_network_to_csv(G,netname):
             outgoing_writer.writerow(joint)
 
 
-def act_as_main(foldername,parameters,Istar):
+def act_as_main(foldername,parameters,Istar,prog):
     # This program will run the we_sis_network_extinction.py on the laptop\desktop
     program_path = os.path.dirname(os.path.realpath(__file__)) +'/cwesis.exe'
     os.mkdir(foldername)
     os.chdir(foldername)
     data_path = os.getcwd() +'/'
     # dir_path = os.path.dirname(os.path.realpath(__file__)) +'/' + foldername +'/'
-    N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
+    if (prog=='pl'):
+        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,prog, Beta_avg = parameters
+    else:
+        N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
     if prog == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))), int(int(k) * (1 + float(eps_din))), int(
@@ -72,11 +75,21 @@ def act_as_main(foldername,parameters,Istar):
         Beta = float(Beta_avg) / (1 + float(eps_din) * float(eps_dout))  # This is so networks with different std will have the reproduction number
         parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,number_of_networks,tau,Istar,new_trajcetory_bin,prog,data_path,eps_din,eps_dout])
         np.save('parameters.npy',parameters)
-    # dir_path = os.path.dirname(os.path.realpath(__file__))
+    # pragma omp parallel for
     for i in range(int(number_of_networks)):
         if prog=='bd':
             G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
             parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,prog,data_path,eps_din,eps_dout])
+        elif prog=='h':
+            G = nx.random_regular_graph(int(k), int(N))
+            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta_avg,i,tau,Istar,new_trajcetory_bin,prog,data_path,eps_din,eps_dout])            # Creates a random graphs with k number of neighbors
+        elif prog=='pl':
+            G,a,b = rand_networks.configuration_model_powerlaw(float(a),float(k),int(N))
+            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            Beta_graph = float(lam)/k_avg_graph
+            eps_graph = np.std([G.degree(n) for n in G.nodes()])/k_avg_graph
+            Beta = Beta_graph / (1 + eps_graph**2)
+            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,prog,data_path,eps_graph,eps_graph,a,b])
         else:
             G = rand_networks.configuration_model_directed_graph(prog, float(eps_din), float(eps_dout), int(k), int(N))
             k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
@@ -95,11 +108,12 @@ def act_as_main(foldername,parameters,Istar):
         path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
         path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
         path_parameters = data_path + 'cparameters_{}.txt'.format(i)
+        parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
         # os.system(dir_path + '/slurm.serjob ' + dir_path + './cwesis.exe {} {}'.format(name_Adj_in,name_Adj_out))
         os.system('{} {} {} {}'.format(program_path,path_adj_in,path_adj_out,path_parameters))
 
 
-def job_to_cluster(foldername,parameters,Istar):
+def job_to_cluster(foldername,parameters,Istar,prog):
     # This function submit jobs to the cluster with the following program keys:
     # bd: creates a bimodal directed networks and find its mean time to extinction
     dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -108,7 +122,10 @@ def job_to_cluster(foldername,parameters,Istar):
     os.mkdir(foldername)
     os.chdir(foldername)
     data_path = os.getcwd() +'/'
-    N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
+    if (prog=='pl'):
+        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,prog, Beta_avg = parameters
+    else:
+        N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
     if prog == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))), int(int(k) * (1 + float(eps_din))), int(
@@ -116,7 +133,6 @@ def job_to_cluster(foldername,parameters,Istar):
         Beta = float(Beta_avg) / (1 + float(eps_din) * float(eps_dout))  # This is so networks with different std will have the reproduction number
         parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,number_of_networks,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])
         np.save('parameters.npy',parameters)
-    # pragma omp parallel for
     for i in range(int(number_of_networks)):
         if prog=='bd':
             G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
@@ -124,6 +140,15 @@ def job_to_cluster(foldername,parameters,Istar):
         elif prog=='h':
             G = nx.random_regular_graph(int(k), int(N))
             parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta_avg,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])            # Creates a random graphs with k number of neighbors
+        elif prog == 'pl':
+            G, a, b = rand_networks.configuration_model_powerlaw(float(a), float(k), int(N))
+            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            Beta_graph = float(lam) / k_avg_graph
+            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+            Beta = Beta_graph / (1 + eps_graph ** 2)
+            parameters = np.array(
+                [N, sims, it, k, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
+                 eps_graph, eps_graph, a, b])
         else:
             G = rand_networks.configuration_model_directed_graph(prog, float(eps_din), float(eps_dout), int(k), int(N))
             k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
@@ -150,10 +175,10 @@ def job_to_cluster(foldername,parameters,Istar):
 
 if __name__ == '__main__':
     # Parameters for the network to work
-    N = 1000 # number of nodes
+    N = 10000 # number of nodes
     lam = 1.12 # The reproduction number
     number_of_networks = 10
-    sims = 500 # Number of simulations at each step
+    sims = 1000 # Number of simulations at each step
     # k = N # Average number of neighbors for each node
     k = 200 # Average number of neighbors for each node
     x = 0.2 # intial infection percentage
@@ -162,16 +187,19 @@ if __name__ == '__main__':
     jump = 5
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
+    # eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
+    a = 4.0
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 3
     # tau = 1/(Num_inf*Alpha+N*Beta*k)
     tau = 1.0
     new_trajcetory_bin = 15
-    prog = 'h'
-    parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
+    prog = 'pl'
+    # parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
+    parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
+         prog, Beta_avg])
     graphname  = 'GNull'
-    foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,eps_din,eps_dout)
+    foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a)
     # y1star=(-2*eps_din*(1 + eps_dout*eps_din)+ lam*(-1 + eps_din)*(1 + (-1 + 2*eps_dout)*eps_din)+ np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(-1 +eps_dout)*(-1 +eps_din)*eps_din)
     # y2star=(lam + eps_din*(-2 + 2*lam +lam*eps_din+ 2*eps_dout*(lam +(-1 + lam)*eps_din)) -np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(1 +eps_dout)*eps_din*(1 + eps_din))
     # Istar = (y1star +y2star)*N
@@ -179,6 +207,7 @@ if __name__ == '__main__':
 
 
     # What's the job to run either on the cluster or on the laptop
-    job_to_cluster(foldername,parameters,Istar)
-    # act_as_main(foldername,parameters,Istar)
+    job_to_cluster(foldername,parameters,Istar,prog)
+    # act_as_main(foldername,parameters,Istar,prog)
+
 
