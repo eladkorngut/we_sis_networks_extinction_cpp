@@ -655,26 +655,29 @@ def plot_configuration_model_powerlaw(G,a,b,n,custom_dist):
     plt.show()
 
 
-def configuration_model_powerlaw(a,kavg,n):
+def find_a_binary_search(kavg, n, a):
     class CustomDistribution(rv_discrete):
         def _pmf(self, k, a, b):
             return b * a / (1 + b * k) ** (a + 1)
-
-    def find_a_binary_search(kavg,n,alpha_org, custom_dist,b):
-        mid_mean = np.mean(custom_dist.rvs(a=a, b=b, size=n))
-        high,low = alpha_org,alpha_org-2
-        while np.abs(mid_mean-kavg)/kavg > 0.01:
-            mid = (low + high) / 2
-            mid_mean = np.mean(custom_dist.rvs(a=mid,b=b,size=n))
-            if mid_mean > kavg:
-                low = mid
-            else:
-                high=mid
-        return (low+high)/2
-
     b = 1/(kavg*(a-1))
     custom_dist =CustomDistribution()
-    a=find_a_binary_search(kavg,n,a,custom_dist,b)
+    mid_mean = np.mean(custom_dist.rvs(a=a, b=b, size=n))
+    high, low = a, a - 2
+    while np.abs(mid_mean - kavg) / kavg > 0.01:
+        mid = (low + high) / 2
+        mid_mean = np.mean(custom_dist.rvs(a=mid, b=b, size=n))
+        if mid_mean > kavg:
+            low = mid
+        else:
+            high = mid
+    return (low + high) / 2,b
+
+
+def configuration_model_powerlaw(a,b,n):
+    class CustomDistribution(rv_discrete):
+        def _pmf(self, k, a, b):
+            return b * a / (1 + b * k) ** (a + 1)
+    custom_dist =CustomDistribution()
     sequence = custom_dist.rvs(a=a,b=b,size=n)
     if (np.sum(sequence)%2!=0):
         rand_bin = random.randint(1, n)
@@ -682,7 +685,7 @@ def configuration_model_powerlaw(a,kavg,n):
     G = nx.configuration_model(sequence)
     G = nx.Graph(G)
     G.remove_edges_from(nx.selfloop_edges(G))
-    return G,a,b
+    return G
 
 def configuration_model_undirected_graph(epsilon,avg_degree,N):
     d=np.random.normal(avg_degree, epsilon * avg_degree, N).astype(int)

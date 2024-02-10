@@ -124,6 +124,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
     data_path = os.getcwd() +'/'
     if (prog=='pl'):
         N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,prog, Beta_avg = parameters
+        a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
     else:
         N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
     if prog == 'bd':
@@ -141,14 +142,14 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             G = nx.random_regular_graph(int(k), int(N))
             parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta_avg,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])            # Creates a random graphs with k number of neighbors
         elif prog == 'pl':
-            G, a, b = rand_networks.configuration_model_powerlaw(float(a), float(k), int(N))
+            G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
             k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
             Beta_graph = float(lam) / k_avg_graph
             eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
             Beta = Beta_graph / (1 + eps_graph ** 2)
             parameters = np.array(
-                [N, sims, it, k, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
-                 eps_graph, eps_graph, a, b])
+                [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
+                 eps_graph, eps_graph, a_graph, b_graph])
         else:
             G = rand_networks.configuration_model_directed_graph(prog, float(eps_din), float(eps_dout), int(k), int(N))
             k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
@@ -156,7 +157,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             eps_in_graph = np.std([G.in_degree(n) for n in G.nodes()])/k_avg_graph
             eps_out_graph = np.std([G.out_degree(n) for n in G.nodes()])/k_avg_graph
             Beta = Beta_graph / (1 + np.sign(float(eps_din))*eps_in_graph * np.sign(float(eps_dout))* eps_out_graph)
-            parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_in_graph,eps_out_graph])
+            parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_in_graph,eps_out_graph])
             np.save('parameters_{}.npy'.format(i), parameters)
         infile = 'GNull_{}.pickle'.format(i)
         with open(infile,'wb') as f:
@@ -180,7 +181,7 @@ if __name__ == '__main__':
     number_of_networks = 10
     sims = 1000 # Number of simulations at each step
     # k = N # Average number of neighbors for each node
-    k = 200 # Average number of neighbors for each node
+    k = 20 # Average number of neighbors for each node
     x = 0.2 # intial infection percentage
     Num_inf = int(x*N) # Number of initially infected nodes
     it = 70
