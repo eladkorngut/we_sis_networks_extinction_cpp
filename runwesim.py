@@ -150,6 +150,15 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             parameters = np.array(
                 [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
                  eps_graph, eps_graph, a_graph, b_graph])
+            np.save('parameters_{}.npy'.format(i), parameters)
+        elif prog=='exp':
+            G = rand_networks.configuration_model_undirected_graph_exp(float(k), int(N))
+            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            Beta_graph = float(lam)/k_avg_graph
+            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+            Beta = Beta_graph / (1 + eps_graph ** 2)
+            parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_graph,eps_graph])
+            np.save('parameters_{}.npy'.format(i), parameters)
         else:
             G = rand_networks.configuration_model_directed_graph(prog, float(eps_din), float(eps_dout), int(k), int(N))
             k_avg_graph = np.mean([G.in_degree(n) for n in G.nodes()])
@@ -188,19 +197,23 @@ if __name__ == '__main__':
     jump = 5
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    # eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
+    eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
     a = 4.0
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 3
     # tau = 1/(Num_inf*Alpha+N*Beta*k)
     tau = 1.0
     new_trajcetory_bin = 15
-    prog = 'pl'
-    # parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
-    parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
-         prog, Beta_avg])
+    prog = 'exp'
+    parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
+    # parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
+    #      prog, Beta_avg])
     graphname  = 'GNull'
-    foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a)
+    if prog=='pl':
+        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a)
+    else:
+        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}'.format(
+            prog, N, k, lam, tau, it, jump, new_trajcetory_bin, sims, number_of_networks, eps_din, eps_dout)
     # y1star=(-2*eps_din*(1 + eps_dout*eps_din)+ lam*(-1 + eps_din)*(1 + (-1 + 2*eps_dout)*eps_din)+ np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(-1 +eps_dout)*(-1 +eps_din)*eps_din)
     # y2star=(lam + eps_din*(-2 + 2*lam +lam*eps_din+ 2*eps_dout*(lam +(-1 + lam)*eps_din)) -np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(1 +eps_dout)*eps_din*(1 + eps_din))
     # Istar = (y1star +y2star)*N

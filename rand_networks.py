@@ -696,6 +696,30 @@ def configuration_model_undirected_graph(epsilon,avg_degree,N):
     G.remove_edges_from(nx.selfloop_edges(G))
     return G
 
+def configuration_model_undirected_graph_exp(avg_degree,N):
+    d=np.random.exponential(avg_degree, N).astype(int)
+    if np.sum(d)%2!=0:
+        d[int(N*np.random.random())]+=1
+    G = nx.configuration_model(d.astype(int))
+    G = nx.Graph(G)
+    G.remove_edges_from(nx.selfloop_edges(G))
+    return G
+
+
+# def configuration_model_dist_gen(avg,sigma,n):
+#     class CustomDistribution(rv_discrete):
+#         def _pmf(self, k, a,sigma):
+#             return (1/(sigma*np.sqrt(2*np.pi)))*np.exp(-(1/2)*((k-a)/sigma)**2)
+#
+#     custom_dist =CustomDistribution()
+#     sequence = custom_dist.rvs(a=avg,sigma=sigma,size=n)
+#     if (np.sum(sequence)%2!=0):
+#         rand_bin = random.randint(1, n)
+#     G = nx.configuration_model(sequence)
+#     G = nx.Graph(G)
+#     G.remove_edges_from(nx.selfloop_edges(G))
+#     return G
+
 
 def import_jason_network(file):
     a=[]
@@ -798,11 +822,11 @@ if __name__ == '__main__':
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
     # custom_dist =CustomDistribution
-    a,k,n=12.0,20,10000
+    # a,k,n=12.0,20,10000
     # b=1/(k*(a-1))
     # a_for_graph =3.37
     # a_for_graph =10.0
-    G,a,b= configuration_model_powerlaw(a,k,n)
+    # G,a,b= configuration_model_powerlaw(a,k,n)
     # plot_configuration_model_powerlaw(G,a,b,n,custom_dist)
     # degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
     # plt.hist(degree_sequence, bins=np.arange(1, 50)-0.5, density=True, alpha=0.6, color='g', label='Histogram of Generated degree')
@@ -812,7 +836,7 @@ if __name__ == '__main__':
     # x = np.arange(1, 50)
     # plt.plot(x, custom_dist.pmf(x,a=a, b=b), 'ro-', label='PMF', markersize=8)
     # plt.show()
-    # eps_in,eps_out=[0.5],[0.0]
+    # eps_in,eps_out=[1.0],[1.0]
     # for ein,eout in zip(eps_in,eps_out):
     #     G=configuration_model_directed_graph('gauss_c', ein, eout, 50, 400)
     #     degree_in=[G.in_degree(n) for n in G.nodes()]
@@ -823,6 +847,20 @@ if __name__ == '__main__':
     #     plt.hist(degree_in, bins=100)
     #     # plt.hist((degree_out),bins=400)
     #     plt.show()
+    avg_degree,epsilon,N=[20,20,20],[0.9786772558354417,0.5,0.2],[10000,10000,10000]
+    for eps,avg,n in zip(epsilon,avg_degree,N):
+        # G=configuration_model_undirected_graph(eps,avg,n)
+        G = configuration_model_undirected_graph_exp(avg, n)
+        degree=np.array([G.degree(n) for n in G.nodes()])
+        # v_in.append(np.std(degree_in)/np.mean(degree_in))
+        # v_out.append(np.std(degree_out)/np.mean(degree_out))
+        # plt.hist((degree_in,degree_out),bins=500)
+        plt.xlabel('k')
+        plt.ylabel('p(k)')
+        plt.title(r'Histogram Gauss for N={} $\sigma={}$, <k>={}'.format(n,round(np.std(degree),2),round(np.mean(degree),2)))
+        plt.hist(degree, bins=200,density=True)
+        plt.savefig('hist_degree_N{}_eps_{}_kavg_{}.png'.format(n,round(eps,2),avg),dpi=500)
+        plt.show()
     # print(*v_in, sep = ", ")
     # print(*v_out, sep = ", ")
     # degrees_in = [G.in_degree(n) for n in G.nodes()]
@@ -850,6 +888,7 @@ if __name__ == '__main__':
 # G=random_bimodal_graph(d1 , d2, N, seed=None)
 # export_network(G)
 # draw_basic_nx_g(G)
+
 
 
 
