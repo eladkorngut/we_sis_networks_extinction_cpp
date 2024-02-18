@@ -460,6 +460,28 @@ void write_output_data(const std::string &filename,std::vector<T> &data){
     file.close();
 }
 
+template <typename T>
+void write_output_data(const std::string &filename,std::deque<T> &data){
+    std::ofstream file(filename,std::ios::app);
+    for (auto element=data.begin();element!=data.end();++element){file<<*element<<",";}
+    file<<std::endl;
+    file.close();
+}
+
+template <typename T1, typename T2>
+void write_output_data_multi_col(const std::string &filename, const std::list<T1> &data1, std::list<T2> &data2){
+
+    std::ofstream file(filename, std::ios::app);
+    auto element1=data1.begin();
+    auto element2=data2.begin();
+    for (;element1!=data1.end() && element2!=data2.end();++element1,++element2){
+        file<<*element1<<","<<*element2<<",";
+        file<<std::endl;
+    }
+    file<<std::endl;
+    file.close();
+}
+
 void intalize_SI_connections(std::list<int>& SI,std::list<std::vector<int>>& s_m,int k_max){
     std::list<std::vector<int>>::iterator it_s_m=s_m.begin();
     std::list<int>::iterator it_SI=SI.begin();
@@ -743,7 +765,7 @@ int main(int argc, char* argv[]) {
 
     double n_min = mf_solution,n_min_new;
     std::list<int>::iterator it_min_new;
-    int relaxation_time=10;
+    int relaxation_time=20;
     // End of variable defnitions
 
     networks_dynamics net_d(num_inf,weights,avec_sum,t,infected_node,infected_neighbors_in,
@@ -781,8 +803,10 @@ int main(int argc, char* argv[]) {
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
     std::cout << "Program execution time: " << duration.count() << " seconds" << std::endl;
-    std::string deathname="death.csv", parmetername="output_parameters.csv";
+    std::string deathname="death.csv", parmetername="output_parameters.csv",weights_name="weights.csv",name_Nlimits="Nlimits.csv";
     write_output_data(deathname,death_vec);
+    write_output_data(name_Nlimits,Nlimits);
+    write_output_data_multi_col(weights_name,net_d.num_inf,net_d.weights);
     std::vector<double> outputparameters={double(duration.count()),double(network_number),TAU};
     write_output_data(parmetername,outputparameters);
     return 0;
