@@ -703,7 +703,7 @@ def configuration_model_powerlaw(a,b,n):
     G = nx.configuration_model(sequence)
     G = nx.Graph(G)
     G.remove_edges_from(nx.selfloop_edges(G))
-    return G,a,b
+    return G
 
 def configuration_model_undirected_graph(epsilon,avg_degree,N):
     d=np.random.normal(avg_degree, epsilon * avg_degree, N).astype(int)
