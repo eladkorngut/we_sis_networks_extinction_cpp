@@ -149,7 +149,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
                     a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
                 else:
                     a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
-                G, a_graph, b_graph = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
+                G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
                 k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
             Beta_graph = float(lam) / k_avg_graph
             eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
