@@ -145,7 +145,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
             k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
             while (np.abs(k_avg_graph - float(k)) / float(k) > 0.05):
-                if a < 5.0:
+                if float(a) < 5.0:
                     a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
                 else:
                     a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     x = 0.2 # intial infection percentage
     Num_inf = int(x*N) # Number of initially infected nodes
     it = 70
-    jump = 5
+    jump = 1
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
     eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
@@ -209,12 +209,12 @@ if __name__ == '__main__':
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 20
     # tau = 1/(Num_inf*Alpha+N*Beta*k)
-    tau = 0.75
+    tau = 0.15
     new_trajcetory_bin = 50
-    prog = 'exp'
-    parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
-    # parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
-    #      prog, Beta_avg])
+    prog = 'pl'
+    # parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
+    parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
+         prog, Beta_avg])
     graphname  = 'GNull'
     if prog=='pl':
         foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a)
