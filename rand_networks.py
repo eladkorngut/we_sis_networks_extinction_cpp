@@ -643,15 +643,26 @@ def configuration_model_directed_graph(
 
 def plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k):
     degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
-    plt.hist(degree_sequence, bins=np.arange(1, 100)-0.5, density=True, alpha=0.6, color='y', label='Histogram of Generated degree')
-    plt.title('Power-law Degree Distribution with k={}, a={}, b={} and N={}'.format(round(np.mean(degree_sequence),2),round(a,2),round(b,2),n))
+    hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)))
+    plt.plot(edges[:-1], hist, 'ro', label='Network')
+    x = np.arange(1, n)
+    pmf_values = n * custom_dist.pmf(x, a, b)
+
+    # Filter values where pmf_values is greater than zero
+    valid_indices = pmf_values > 1
+    x_filtered = x[valid_indices]
+    pmf_values_filtered = pmf_values[valid_indices]
+
+    plt.plot(x_filtered, pmf_values_filtered, 'b-', label='PMF', linewidth=2)
+    plt.xscale('log')
+    plt.yscale('log')
     plt.xlabel('Degree (k)')
-    plt.ylabel('Probability')
-    x = np.arange(1, 100)
-    # plt.plot(x, custom_dist.pmf(x,k=k,a=a, b=b), 'b-', label='PMF',linewidth=2)
+    plt.ylabel('P(k)')
+    plt.title('Power-law Degree Distribution with k={}, a={}, b={} and N={}'.format(round(np.mean(degree_sequence), 2),
+                                                                                    round(a, 2), round(b, 2), n))
     plt.legend()
     plt.grid(True)
-    plt.savefig('power_law_graph.png',dpi=500)
+    plt.savefig('power_law_graph_a{}.png'.format(round(a,1)), dpi=500)
     plt.show()
 
 
@@ -839,8 +850,10 @@ if __name__ == '__main__':
     class CustomDistribution(rv_discrete):
         def _pmf(self, k, a, b):
             return b * a / (1 + b * k) ** (a + 1)
-    custom_dist =CustomDistribution
-    a,k,n=0.01,20,10000
+
+
+    custom_dist = CustomDistribution()
+    a,k,n=10.0,20,10000
     # b=1/(k*(a-1))
     # a_for_graph =3.37
     # a_for_graph =10.0
@@ -849,6 +862,13 @@ if __name__ == '__main__':
     # a_m,b_m=0.4,0.590625
     G,a,b= configuration_model_powerlaw(a_graph, b_graph, n)
     k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+    while (np.abs(k_avg_graph-k)/k>0.05):
+        if a<2.0:
+            a_graph, b_graph = find_b_binary_search(k, n, a)
+        else:
+            a_graph, b_graph = find_a_binary_search(k, n, a)
+        G,a_graph,b_graph= configuration_model_powerlaw(a_graph, b_graph, n)
+        k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
     plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k_avg_graph)
     # degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
     # plt.hist(degree_sequence, bins=np.arange(1, 50)-0.5, density=True, alpha=0.6, color='g', label='Histogram of Generated degree')
