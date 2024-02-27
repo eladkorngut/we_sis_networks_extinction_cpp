@@ -10,6 +10,8 @@ import matplotlib.cbook as cbook
 from itertools import combinations
 from itertools import zip_longest
 from itertools import chain
+
+import numpy.random
 from scipy.stats import norm
 from scipy.stats import gamma
 from scipy.stats import uniform
@@ -640,6 +642,72 @@ def configuration_model_directed_graph(
     name = "directed configuration_model {} nodes {} edges"
     return G
 
+def plot_configuration_model_powerlaw_multi(G_array,a_array,b,n,custom_dist,k):
+    marker_type, line_style = ['o', 'v', '+'], ['-', '--', ':']
+    for G, a, mk, ls in zip(G_array, a_array, marker_type, line_style):
+        degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
+        hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)))
+        plt.plot(edges[:-1], hist, marker=mk, linestyle='none', label='a={}'.format(a))
+        # x = np.arange(1, n)
+        # pmf_values = n * custom_dist.pmf(x, a, b)
+
+        # Filter values where pmf_values is greater than zero
+        # valid_indices = pmf_values > 1
+        # x_filtered = x[valid_indices]
+        # pmf_values_filtered = pmf_values[valid_indices]
+
+        # plt.plot(x_filtered, pmf_values_filtered, 'b-', label='PMF', linewidth=2)
+    # Define the start and end points of the lines
+    x_start, y_start = 1, 700
+    x_end, y_end = 700, 1
+
+    x_start_2, y_start_2 = 3, 1100
+    x_end_2, y_end_2 = 300, 1
+
+    # Convert the start and end points to log scale
+    log_x_start = np.log10(x_start)
+    log_y_start = np.log10(y_start)
+    log_x_end = np.log10(x_end)
+    log_y_end = np.log10(y_end)
+
+    log_x_start2 = np.log10(x_start_2)
+    log_y_start2 = np.log10(y_start_2)
+    log_x_end2 = np.log10(x_end_2)
+    log_y_end2 = np.log10(y_end_2)
+
+    # Fit a linear line to the log-transformed data for slope -2
+    m2 = -1.5  # Slope of the log-transformed line for slope -2
+    log_x2 = np.linspace(log_x_start2, log_x_end2, 100)
+    log_y2 = m2 * (log_x2 - log_x_start2) + log_y_start2
+
+    # Convert the log-scale data back to linear scale for slope -2
+    x2 = 10 ** log_x2
+    y2 = 10 ** log_y2
+
+    # Plot the line for slope -2
+    plt.plot(x2, y2, color='k', linestyle='-', label='Slope -1.5')
+
+    # Fit a linear line to the log-transformed data for slope -1
+    m1 = -1  # Slope of -1
+    log_x1 = np.linspace(log_x_start, log_x_end, 100)
+    log_y1 = m1 * (log_x1 - log_x_start) + log_y_start
+
+    # Convert the log-scale data back to linear scale for slope -1
+    x1 = 10 ** log_x1
+    y1 = 10 ** log_y1
+
+    # Plot the line for slope -1
+    plt.plot(x1, y1, color='r', linestyle='--', label='Slope -1')
+
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('Degree (k)')
+    plt.ylabel('P(k)')
+    plt.title('Power-law Degree Distribution with N={}'.format(n))
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('power_law_graph_all_a.png', dpi=500)
+    plt.show()
 
 def plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k):
     degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
@@ -665,6 +733,19 @@ def plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k):
     plt.savefig('power_law_graph_a{}.png'.format(round(a,1)), dpi=500)
     plt.show()
 
+def plot_gamma_distribution(G,kavg,epsilon,n):
+    degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
+    hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)),density=True)
+    plt.plot(edges[:-1], hist, '-ro', label='Network')
+    # plt.xscale('log')
+    # plt.yscale('log')
+    plt.xlabel('Degree (k)')
+    plt.ylabel('P(k)')
+    plt.title(r'Gamma Degree Distribution with k={}, $\epsilon$={}'.format(round(np.mean(degree_sequence),2), round(epsilon,2), n))
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('gamma_graph_k{}_eps_{}_N{}.png'.format(round(kavg,1),round(epsilon,2),n), dpi=500)
+    plt.show()
 
 def find_a_binary_search(kavg, n, a):
     class CustomDistribution(rv_discrete):
@@ -723,7 +804,7 @@ def configuration_model_undirected_graph(epsilon,avg_degree,N):
     G = nx.configuration_model(d.astype(int))
     G = nx.Graph(G)
     G.remove_edges_from(nx.selfloop_edges(G))
-    return G
+    return G,a,b
 
 def configuration_model_undirected_graph_exp(avg_degree,N):
     d=np.random.exponential(avg_degree, N).astype(int)
@@ -734,6 +815,16 @@ def configuration_model_undirected_graph_exp(avg_degree,N):
     G.remove_edges_from(nx.selfloop_edges(G))
     return G
 
+def configuration_model_undirected_graph_gamma(kavg,epsilon,N):
+    theta=epsilon**2*kavg
+    shape =1/epsilon**2
+    d=numpy.random.default_rng().gamma(shape,theta,N).astype(int)
+    if np.sum(d)%2!=0:
+        d[int(N*np.random.random())]+=1
+    G = nx.configuration_model(d.astype(int))
+    G = nx.Graph(G)
+    G.remove_edges_from(nx.selfloop_edges(G))
+    return G
 
 # def configuration_model_dist_gen(avg,sigma,n):
 #     class CustomDistribution(rv_discrete):
@@ -847,29 +938,38 @@ if __name__ == '__main__':
     # v_in,v_out=[],[]
     # eps_in,eps_out=[0.1,0.1,0.1,0.1,0.1,0.1],[0.05,0.1,0.15,0.2,0.25,0.3]
 
-    class CustomDistribution(rv_discrete):
-        def _pmf(self, k, a, b):
-            return b * a / (1 + b * k) ** (a + 1)
-
-
-    custom_dist = CustomDistribution()
-    a,k,n=10.0,20,10000
+    # class CustomDistribution(rv_discrete):
+    #     def _pmf(self, k, a, b):
+    #         return b * a / (1 + b * k) ** (a + 1)
+    k,epsilon,N= 20,0.5,10000
+    G = configuration_model_undirected_graph_gamma(k,epsilon,N)
+    plot_gamma_distribution(G,k,epsilon,N)
+    # custom_dist = CustomDistribution()
+    # a,k,n=10.0,20,10000
     # b=1/(k*(a-1))
     # a_for_graph =3.37
     # a_for_graph =10.0
     # a_graph, b_graph = find_a_binary_search(k, n, a)
-    a_graph, b_graph = find_b_binary_search(k, n, a)
-    # a_m,b_m=0.4,0.590625
-    G,a,b= configuration_model_powerlaw(a_graph, b_graph, n)
-    k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-    while (np.abs(k_avg_graph-k)/k>0.05):
-        if a<2.0:
-            a_graph, b_graph = find_b_binary_search(k, n, a)
-        else:
-            a_graph, b_graph = find_a_binary_search(k, n, a)
-        G,a_graph,b_graph= configuration_model_powerlaw(a_graph, b_graph, n)
-        k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-    plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k_avg_graph)
+    # k,n=20,10000
+    # a_array,b_array=[0.1,0.5],[]
+    # G_array,k_array=[],[]
+    # for a in a_array:
+    #     a_graph, b_graph = find_b_binary_search(k, n, a)
+    #     G= configuration_model_powerlaw(a_graph, b_graph, n)
+    #     k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+    #     while (np.abs(k_avg_graph-k)/k>0.05):
+    #         if a<5.0:
+    #             a_graph, b_graph = find_b_binary_search(k, n, a)
+    #         else:
+    #             a_graph, b_graph = find_a_binary_search(k, n, a)
+    #         G= configuration_model_powerlaw(a_graph, b_graph, n)
+    #         k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+    #     b_array.append(b_graph)
+    #     k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+    #     k_array.append(k_avg_graph)
+    #     G_array.append(G)
+    # plot_configuration_model_powerlaw_multi(G_array,a_array,b_array,n,custom_dist,k_array)
+    # plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k_avg_graph)
     # degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
     # plt.hist(degree_sequence, bins=np.arange(1, 50)-0.5, density=True, alpha=0.6, color='g', label='Histogram of Generated degree')
     # plt.title('Power-law Degree Distribution')
