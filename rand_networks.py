@@ -735,13 +735,16 @@ def plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k):
 
 def plot_gamma_distribution(G,kavg,epsilon,n):
     degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
-    hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)),density=True)
-    plt.plot(edges[:-1], hist, '-ro', label='Network')
+    hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)),density=False)
+    plt.plot(edges[:-1], hist, 'ro', label='Network')
+    possible_degrees = range(0,max(degree_sequence))
+    gamma_theory = (gamma.pdf(possible_degrees, a=1 / epsilon ** 2, scale=epsilon ** 2 * kavg)*n)
+    plt.plot(possible_degrees,gamma_theory,'-b',label='Theory')
     # plt.xscale('log')
     # plt.yscale('log')
     plt.xlabel('Degree (k)')
     plt.ylabel('P(k)')
-    plt.title(r'Gamma Degree Distribution with k={}, $\epsilon$={}'.format(round(np.mean(degree_sequence),2), round(epsilon,2), n))
+    plt.title(r'Gamma Degree Distribution with k={}, $\epsilon$={} and N={}'.format(round(np.mean(degree_sequence),2), round(epsilon,2), n))
     plt.legend()
     plt.grid(True)
     plt.savefig('gamma_graph_k{}_eps_{}_N{}.png'.format(round(kavg,1),round(epsilon,2),n), dpi=500)
@@ -816,14 +819,15 @@ def configuration_model_undirected_graph_exp(avg_degree,N):
     return G
 
 def configuration_model_undirected_graph_gamma(kavg,epsilon,N):
-    theta=epsilon**2*kavg
-    shape =1/epsilon**2
-    d=numpy.random.default_rng().gamma(shape,theta,N).astype(int)
-    if np.sum(d)%2!=0:
-        d[int(N*np.random.random())]+=1
-    G = nx.configuration_model(d.astype(int))
-    G = nx.Graph(G)
-    G.remove_edges_from(nx.selfloop_edges(G))
+    theta,shape,k_avg_graph =epsilon**2*kavg,1/epsilon**2,0.0
+    while np.abs(kavg-k_avg_graph)/kavg>0.05:
+        d = numpy.random.default_rng().gamma(shape,theta,N).astype(int)
+        if np.sum(d)%2!=0:
+            d[int(len(d)*np.random.random())]+=1
+        G = nx.configuration_model(d)
+        G = nx.Graph(G)
+        G.remove_edges_from(nx.selfloop_edges(G))
+        k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
     return G
 
 # def configuration_model_dist_gen(avg,sigma,n):
@@ -941,7 +945,7 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N= 20,0.5,10000
+    k,epsilon,N= 20,1.0,10000
     G = configuration_model_undirected_graph_gamma(k,epsilon,N)
     plot_gamma_distribution(G,k,epsilon,N)
     # custom_dist = CustomDistribution()
