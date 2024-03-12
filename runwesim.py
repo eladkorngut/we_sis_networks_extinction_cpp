@@ -132,6 +132,13 @@ def job_to_cluster(foldername,parameters,Istar,prog):
         N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
         N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajcetory_bin, prog, Beta_avg=\
         int(N),int(sims),int(it),float(k),float(x),float(lam),jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg
+
+        G = rand_networks.configuration_model_undirected_graph_gamma(float(k), float(eps_din), int(N))
+        k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+        Beta_graph = float(lam) / k_avg_graph
+        eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+        Beta = Beta_graph / (1 + eps_graph ** 2)
+
     if prog == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))), int(int(k) * (1 + float(eps_din))), int(
@@ -172,11 +179,11 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_graph,eps_graph])
             np.save('parameters_{}.npy'.format(i), parameters)
         elif prog=='gam':
-            G = rand_networks.configuration_model_undirected_graph_gamma(float(k),float(eps_din),int(N))
-            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-            Beta_graph = float(lam)/k_avg_graph
-            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
-            Beta = Beta_graph / (1 + eps_graph ** 2)
+            # G = rand_networks.configuration_model_undirected_graph_gamma(float(k),float(eps_din),int(N))
+            # k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            # Beta_graph = float(lam)/k_avg_graph
+            # eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+            # Beta = Beta_graph / (1 + eps_graph ** 2)
             parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,
                                    prog,dir_path,eps_graph,eps_graph])
             np.save('parameters_{}.npy'.format(i), parameters)
@@ -207,7 +214,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
 if __name__ == '__main__':
     # Parameters for the network to work
     N = 10000 # number of nodes
-    lam = 1.3 # The reproduction number
+    lam = 1.4 # The reproduction number
     number_of_networks = 10
     sims = 1000 # Number of simulations at each step
     # k = N # Average number of neighbors for each node
@@ -218,7 +225,7 @@ if __name__ == '__main__':
     jump = 1
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = 3.1,3.1 # The normalized std (second moment divided by the first) of the network
+    eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
     a = 0.2
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 20
@@ -226,9 +233,9 @@ if __name__ == '__main__':
     tau = 1.0
     new_trajcetory_bin = 50
     prog = 'gam'
-    parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
-    # parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
-    #     prog, Beta_avg])
+    # parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
+    parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
+         prog, Beta_avg])
     graphname  = 'GNull'
     if prog=='pl':
         foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a)
@@ -244,5 +251,4 @@ if __name__ == '__main__':
     # What's the job to run either on the cluster or on the laptop
     job_to_cluster(foldername,parameters,Istar,prog)
     # act_as_main(foldername,parameters,Istar,prog)
-
 
