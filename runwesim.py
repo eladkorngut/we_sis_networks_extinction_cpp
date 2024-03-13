@@ -123,22 +123,35 @@ def job_to_cluster(foldername,parameters,Istar,prog):
     os.chdir(foldername)
     data_path = os.getcwd() +'/'
     if (prog=='pl'):
-        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,prog, Beta_avg = parameters
-        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin, prog, Beta_avg=\
+        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,prog, Beta_avg,error_graphs = parameters
+        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin, prog, Beta_avg,error_graphs=\
         int(N), int(sims), int(it), float(k), float(x), float(lam), int(jump), int(Num_inf), float(Alpha), int(number_of_networks), float(tau),\
-        float(a), float(new_trajcetory_bin),prog, float(Beta_avg)
+        float(a), float(new_trajcetory_bin),prog, float(Beta_avg),bool(error_graphs)
         a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
+        if error_graphs==False:
+            G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
+            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            while (np.abs(k_avg_graph - float(k)) / float(k) > 0.05):
+                if a < 5.0:
+                    a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
+                else:
+                    a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
+                G, a_graph, b_graph = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
+                k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            Beta_graph = float(lam) / k_avg_graph
+            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+            Beta = Beta_graph / (1 + eps_graph ** 2)
     else:
-        N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg = parameters
-        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajcetory_bin, prog, Beta_avg=\
-        int(N),int(sims),int(it),float(k),float(x),float(lam),jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg
-
-        G = rand_networks.configuration_model_undirected_graph_gamma(float(k), float(eps_din), int(N))
-        k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-        Beta_graph = float(lam) / k_avg_graph
-        eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
-        Beta = Beta_graph / (1 + eps_graph ** 2)
-
+        N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg,error_graphs = parameters
+        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajcetory_bin, prog, Beta_avg,error_graphs=\
+        int(N),int(sims),int(it),float(k),float(x),float(lam),float(jump),int(Num_inf),float(Alpha),int(number_of_networks),float(tau),float(eps_din),float(eps_dout),\
+        int(new_trajcetory_bin),prog,float(Beta_avg),bool(error_graphs)
+        if error_graphs==True:
+            G = rand_networks.configuration_model_undirected_graph_gamma(float(k),float(eps_din),int(N))
+            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+            Beta_graph = float(lam)/k_avg_graph
+            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+            Beta = Beta_graph / (1 + eps_graph ** 2)
     if prog == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))), int(int(k) * (1 + float(eps_din))), int(
@@ -157,15 +170,16 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
             k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
             while (np.abs(k_avg_graph - float(k)) / float(k) > 0.05):
-                if a < 5.0:
-                    a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
-                else:
-                    a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
-                G, a_graph, b_graph = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
-                k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-            Beta_graph = float(lam) / k_avg_graph
-            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
-            Beta = Beta_graph / (1 + eps_graph ** 2)
+                if error_graphs==False:
+                    if a < 5.0:
+                        a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
+                    else:
+                        a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
+                    G, a_graph, b_graph = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
+                    k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+                Beta_graph = float(lam) / k_avg_graph
+                eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+                Beta = Beta_graph / (1 + eps_graph ** 2)
             parameters = np.array(
                 [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
                  eps_graph, eps_graph, a_graph, b_graph])
@@ -179,11 +193,12 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_graph,eps_graph])
             np.save('parameters_{}.npy'.format(i), parameters)
         elif prog=='gam':
-            # G = rand_networks.configuration_model_undirected_graph_gamma(float(k),float(eps_din),int(N))
-            # k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-            # Beta_graph = float(lam)/k_avg_graph
-            # eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
-            # Beta = Beta_graph / (1 + eps_graph ** 2)
+            if error_graphs==False:
+                G = rand_networks.configuration_model_undirected_graph_gamma(float(k),float(eps_din),int(N))
+                k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+                Beta_graph = float(lam)/k_avg_graph
+                eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
+                Beta = Beta_graph / (1 + eps_graph ** 2)
             parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,
                                    prog,dir_path,eps_graph,eps_graph])
             np.save('parameters_{}.npy'.format(i), parameters)
@@ -225,7 +240,7 @@ if __name__ == '__main__':
     jump = 1
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = 0.0,0.0 # The normalized std (second moment divided by the first) of the network
+    eps_din,eps_dout = 1.5,1.5 # The normalized std (second moment divided by the first) of the network
     a = 0.2
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 20
@@ -233,15 +248,16 @@ if __name__ == '__main__':
     tau = 1.0
     new_trajcetory_bin = 50
     prog = 'gam'
-    # parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg])
-    parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
-         prog, Beta_avg])
+    error_graphs = True
+    parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg,error_graphs])
+    # parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
+    #      prog, Beta_avg,error_graphs])
     graphname  = 'GNull'
     if prog=='pl':
-        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a)
+        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_a_{}_err_{}'.format(prog,N,k,lam,tau,it,jump,new_trajcetory_bin,sims,number_of_networks,a,error_graphs)
     else:
-        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}'.format(
-            prog, N, k, lam, tau, it, jump, new_trajcetory_bin, sims, number_of_networks, eps_din, eps_dout)
+        foldername = 'prog_{}_N{}_k_{}_R_{}_tau_{}_it_{}_jump_{}_new_trajcetory_bin_{}_sims_{}_net_{}_epsin_{}_epsout_{}_err_{}'.format(
+            prog, N, k, lam, tau, it, jump, new_trajcetory_bin, sims, number_of_networks, eps_din, eps_dout,error_graphs)
     # y1star=(-2*eps_din*(1 + eps_dout*eps_din)+ lam*(-1 + eps_din)*(1 + (-1 + 2*eps_dout)*eps_din)+ np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(-1 +eps_dout)*(-1 +eps_din)*eps_din)
     # y2star=(lam + eps_din*(-2 + 2*lam +lam*eps_din+ 2*eps_dout*(lam +(-1 + lam)*eps_din)) -np.sqrt(lam**2 +eps_din*(4*eps_din +lam**2*eps_din*(-2 +eps_din**2) +4*eps_dout*(lam -(-2 + lam)*eps_din**2) +4*eps_dout**2*eps_din*(lam -(-1 + lam)*eps_din**2))))/(4*lam*(1 +eps_dout)*eps_din*(1 + eps_din))
     # Istar = (y1star +y2star)*N
@@ -251,4 +267,5 @@ if __name__ == '__main__':
     # What's the job to run either on the cluster or on the laptop
     job_to_cluster(foldername,parameters,Istar,prog)
     # act_as_main(foldername,parameters,Istar,prog)
+
 
