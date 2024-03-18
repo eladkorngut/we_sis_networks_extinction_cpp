@@ -658,7 +658,7 @@ def plot_configuration_model_powerlaw_multi(G_array,a_array,b,n,custom_dist,k):
 
         # plt.plot(x_filtered, pmf_values_filtered, 'b-', label='PMF', linewidth=2)
     # Define the start and end points of the lines
-    x_start, y_start = 1, 700
+    x_start, y_start = 1, 10000
     x_end, y_end = 700, 1
 
     x_start_2, y_start_2 = 3, 1100
@@ -733,21 +733,29 @@ def plot_configuration_model_powerlaw(G,a,b,n,custom_dist,k):
     plt.savefig('power_law_graph_a{}.png'.format(round(a,1)), dpi=500)
     plt.show()
 
-def plot_gamma_distribution(G,kavg,epsilon,n):
+def plot_gamma_distribution(G,kavg,epsilon,n,net_type):
+    if net_type=='bet':
+        title='Beta'
+    elif net_type=='gam':
+        title='Gamma'
+    elif net_type=='ig':
+        title = 'Wald'
+    elif net_type=='ln':
+        title='Log-norm'
     degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
     hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)),density=False)
     plt.plot(edges[:-1], hist, 'ro', label='Network')
     possible_degrees = range(0,max(degree_sequence))
-    gamma_theory = (gamma.pdf(possible_degrees, a=1 / epsilon ** 2, scale=epsilon ** 2 * kavg)*n)
-    plt.plot(possible_degrees,gamma_theory,'-b',label='Theory')
+    # gamma_theory = (gamma.pdf(possible_degrees, a=1 / epsilon ** 2, scale=epsilon ** 2 * kavg)*n)
+    # plt.plot(possible_degrees,gamma_theory,'-b',label='Theory')
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel('Degree (k)')
     plt.ylabel('P(k)')
-    plt.title(r'Gamma Degree Distribution with k={}, $\epsilon$={} and N={}'.format(round(np.mean(degree_sequence),2), round(epsilon,2), n))
+    plt.title(r'Degree Distribution {} with k={}, $\epsilon$={} and N={}'.format(title,round(np.mean(degree_sequence),2), round(epsilon,2), n))
     plt.legend()
     plt.grid(True)
-    plt.savefig('gamma_graph_k{}_eps_{}_N{}.png'.format(round(kavg,1),round(epsilon,2),n), dpi=500)
+    plt.savefig('degree_dist_graph_{}_k{}_eps_{}_N{}.png'.format(net_type,round(kavg,1),round(epsilon,2),n), dpi=500)
     plt.show()
 
 def find_a_binary_search(kavg, n, a):
@@ -829,6 +837,28 @@ def naive_config_gamma(kavg,epsilon,N):
     k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
     return G,k_avg_graph
 
+def naive_config_multi(kavg,epsilon,N,net_type):
+    if net_type == 'ig':
+        wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
+        d = numpy.random.default_rng().wald(wald_mu, wald_lambda, N).astype(int)
+    elif net_type == 'bet':
+        alpha_beta_dist, beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2), (
+                    (kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
+        d = (numpy.random.default_rng().beta(alpha_beta_dist, beta_beta_dist, N) * N).astype(int)
+    elif net_type == 'ln':
+        mu_log_norm, sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / k ** 2), np.sqrt(
+            2 * np.log(k) + np.log((1 + epsilon ** 2) / k ** 2))
+        d = numpy.random.lognormal(mu_log_norm, sigma_log_norm, N).astype(int)
+    elif net_type == 'gam':
+        theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
+        d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
+    if np.sum(d) % 2 != 0:
+        d[int(len(d) * np.random.random())] += 1
+    G = nx.configuration_model(d)
+    G = nx.Graph(G)
+    G.remove_edges_from(nx.selfloop_edges(G))
+    k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+    return G,k_avg_graph
 
 def find_k_binary_search(kavg,epsilon,n):
     high, low = n, kavg
@@ -842,6 +872,49 @@ def find_k_binary_search(kavg,epsilon,n):
         else:
             high = mid
     return G_mid,(low + high) / 2
+
+
+def find_multi_k_binary_search(kavg,epsilon,n,net_type):
+    high, low = n, kavg
+    if net_type=='bet':
+        high = N / (1+epsilon**2)
+    mid = (low + high) / 2
+    G_mean,mid_mean = naive_config_multi(mid,epsilon,n,net_type)
+    while np.abs(mid_mean - kavg) / kavg > 0.05:
+        mid = (low + high) / 2
+        G_mid,mid_mean = naive_config_multi(mid,epsilon,n,net_type)
+        if mid_mean < kavg:
+            low = mid
+        else:
+            high = mid
+    return G_mid,(low + high) / 2
+
+
+def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
+    k_avg_graph = 0
+    if N>1000:
+        while np.abs(kavg-k_avg_graph)/kavg>0.05:
+            if net_type=='ig':
+                wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
+                d = numpy.random.default_rng().wald(wald_mu,wald_lambda,N).astype(int)
+            elif net_type=='bet':
+                alpha_beta_dist,beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
+                d=(numpy.random.default_rng().beta(alpha_beta_dist,beta_beta_dist,N)*N).astype(int)
+            elif net_type=='ln':
+                mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / k ** 2),np.sqrt(2 * np.log(k) + np.log((1 + epsilon ** 2) / k ** 2))
+                d = numpy.random.lognormal(mu_log_norm,sigma_log_norm,N).astype(int)
+            elif net_type=='gam':
+                theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
+                d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
+            if np.sum(d)%2!=0:
+                d[int(len(d)*np.random.random())]+=1
+            G = nx.configuration_model(d)
+            G = nx.Graph(G)
+            G.remove_edges_from(nx.selfloop_edges(G))
+            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+        return G
+    G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
+    return G
 
 
 def configuration_model_undirected_graph_gamma(kavg,epsilon,N):
@@ -974,17 +1047,18 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N= 10,3.0,3000
-    G = configuration_model_undirected_graph_gamma(k,epsilon,N)
-    plot_gamma_distribution(G,k,epsilon,N)
+    k,epsilon,N,net_type= 10,3.0,100000,'gam'
+    # G = configuration_model_undirected_graph_gamma(k,epsilon,N)
+    G = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type)
+    plot_gamma_distribution(G,k,epsilon,N,net_type)
     # custom_dist = CustomDistribution()
     # a,k,n=10.0,20,10000
     # b=1/(k*(a-1))
-    # a_for_graph =3.37
-    # a_for_graph =10.0
+    # a_for_graph = 3.37
+    # a_for_graph = 10.0
     # a_graph, b_graph = find_a_binary_search(k, n, a)
-    # k,n=20,10000
-    # a_array,b_array=[0.1,0.5],[]
+    # k,n=10,100000
+    # a_array,b_array=[0.5,1.1],[]
     # G_array,k_array=[],[]
     # for a in a_array:
     #     a_graph, b_graph = find_b_binary_search(k, n, a)
