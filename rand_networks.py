@@ -901,7 +901,7 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
                 alpha_beta_dist,beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
                 d=(numpy.random.default_rng().beta(alpha_beta_dist,beta_beta_dist,N)*N).astype(int)
             elif net_type=='ln':
-                mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / k ** 2),np.sqrt(2 * np.log(k) + np.log((1 + epsilon ** 2) / k ** 2))
+                mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg ** 2),np.sqrt(2 * np.log(kavg) + np.log((1 + epsilon ** 2) / kavg ** 2))
                 d = numpy.random.lognormal(mu_log_norm,sigma_log_norm,N).astype(int)
             elif net_type=='gam':
                 theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
