@@ -846,8 +846,8 @@ def naive_config_multi(kavg,epsilon,N,net_type):
                     (kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
         d = (numpy.random.default_rng().beta(alpha_beta_dist, beta_beta_dist, N) * N).astype(int)
     elif net_type == 'ln':
-        mu_log_norm, sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / k ** 2), np.sqrt(
-            2 * np.log(k) + np.log((1 + epsilon ** 2) / k ** 2))
+        mu_log_norm, sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg ** 2), np.sqrt(
+            2 * np.log(kavg) + np.log((1 + epsilon ** 2) / kavg ** 2))
         d = numpy.random.lognormal(mu_log_norm, sigma_log_norm, N).astype(int)
     elif net_type == 'gam':
         theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
@@ -877,7 +877,7 @@ def find_k_binary_search(kavg,epsilon,n):
 def find_multi_k_binary_search(kavg,epsilon,n,net_type):
     high, low = n, kavg
     if net_type=='bet':
-        high = N / (1+epsilon**2)
+        high = n / (1+epsilon**2)
     mid = (low + high) / 2
     G_mean,mid_mean = naive_config_multi(mid,epsilon,n,net_type)
     while np.abs(mid_mean - kavg) / kavg > 0.05:
@@ -1137,8 +1137,3 @@ if __name__ == '__main__':
 # G=random_bimodal_graph(d1 , d2, N, seed=None)
 # export_network(G)
 # draw_basic_nx_g(G)
-
-
-
-
-
