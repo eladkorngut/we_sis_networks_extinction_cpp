@@ -152,8 +152,9 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             G = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog)
             graph_degrees = [G.degree(n) for n in G.nodes()]
             k_avg_graph,graph_std,graph_skewness = np.mean(graph_degrees),np.std(graph_degrees),skew(graph_degrees)
+            second_moment,third_moment = np.mean((graph_degrees-k_avg_graph)**2),np.mean((graph_degrees-k_avg_graph)**3)
             eps_graph = graph_std / k_avg_graph
-            third_moment = graph_skewness * (graph_std ** 3)
+            # third_moment = graph_skewness * (graph_std ** 3)
             Beta_graph = float(lam)/k_avg_graph
             Beta = Beta_graph / (1 + eps_graph ** 2)
     if prog == 'bd':
@@ -192,11 +193,13 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             G = rand_networks.configuration_model_undirected_graph_exp(float(k), int(N))
             graph_degrees = [G.degree(n) for n in G.nodes()]
             k_avg_graph,graph_std,graph_skewness = np.mean(graph_degrees),np.std(graph_degrees),skew(graph_degrees)
+            second_moment,third_moment = np.mean((graph_degrees-k_avg_graph)**2),np.mean((graph_degrees-k_avg_graph)**3)
             eps_graph = graph_std / k_avg_graph
-            third_moment = graph_skewness * (graph_std ** 3)
+            # third_moment = graph_skewness * (graph_std ** 3)
             Beta_graph = float(lam)/k_avg_graph
             Beta = Beta_graph / (1 + eps_graph ** 2)
-            parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment])
+            parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,
+                                   dir_path,prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
             np.save('parameters_{}.npy'.format(i), parameters)
         else:
             if error_graphs==False:
@@ -204,12 +207,14 @@ def job_to_cluster(foldername,parameters,Istar,prog):
                 graph_degrees = [G.degree(n) for n in G.nodes()]
                 k_avg_graph, graph_std, graph_skewness = np.mean(graph_degrees), np.std(graph_degrees), skew(
                     graph_degrees)
+                second_moment, third_moment = np.mean((graph_degrees - k_avg_graph) ** 2), np.mean(
+                    (graph_degrees - k_avg_graph) ** 3)
                 eps_graph = graph_std / k_avg_graph
-                third_moment = graph_skewness * (graph_std ** 3)
+                # third_moment = graph_skewness * (graph_std ** 3)
                 Beta_graph = float(lam)/k_avg_graph
                 Beta = Beta_graph / (1 + eps_graph ** 2)
             parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,
-                                   prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment])
+                                   prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
             np.save('parameters_{}.npy'.format(i), parameters)
         infile = 'GNull_{}.pickle'.format(i)
         with open(infile,'wb') as f:
