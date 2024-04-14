@@ -1,1 +1,9 @@
 paper_graphs/
+python/
+*.png
+*.csv
+alex_mpirun/
+analysis/
+temp/
+temp_mickey/
+__pycache__/
