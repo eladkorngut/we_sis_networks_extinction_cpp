@@ -906,6 +906,8 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
             elif net_type=='gam':
                 theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
                 d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
+            # Replace zeros with ones
+            d[d == 0] = 1
             if np.sum(d)%2!=0:
                 d[int(len(d)*np.random.random())]+=1
             G = nx.configuration_model(d)
@@ -1047,7 +1049,7 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N,net_type= 10,3.0,100000,'gam'
+    k,epsilon,N,net_type= 10,3.0,10000,'gam'
     # G = configuration_model_undirected_graph_gamma(k,epsilon,N)
     G = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type)
     plot_gamma_distribution(G,k,epsilon,N,net_type)
