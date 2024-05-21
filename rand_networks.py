@@ -914,18 +914,18 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
             G = nx.Graph(G)
             G.remove_edges_from(nx.selfloop_edges(G))
             k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-
+            graph_degrees = np.array([G.degree(n) for n in G.nodes()])
             # Remove nodes with zero degree
             zero_degree_nodes = [n for n, d in G.degree() if d == 0]
             G.remove_nodes_from(zero_degree_nodes)
-        return G
+        return G,graph_degrees
     G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
-
+    graph_degrees = np.array([G.degree(n) for n in G.nodes()])
     # Remove nodes with zero degree
     zero_degree_nodes = [n for n, d in G.degree() if d == 0]
     G.remove_nodes_from(zero_degree_nodes)
 
-    return G
+    return G,graph_degrees
 
 
 def configuration_model_undirected_graph_gamma(kavg,epsilon,N):
