@@ -906,16 +906,25 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
             elif net_type=='gam':
                 theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
                 d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
-            # Remove zeros from d
-            d = d[d != 0]
+            # # Remove zeros from d
+            # d = d[d != 0]
             if np.sum(d)%2!=0:
                 d[int(len(d)*np.random.random())]+=1
             G = nx.configuration_model(d)
             G = nx.Graph(G)
             G.remove_edges_from(nx.selfloop_edges(G))
             k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
+
+            # Remove nodes with zero degree
+            zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+            G.remove_nodes_from(zero_degree_nodes)
         return G
     G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
+
+    # Remove nodes with zero degree
+    zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+    G.remove_nodes_from(zero_degree_nodes)
+
     return G
 
 
