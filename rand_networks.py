@@ -906,8 +906,8 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
             elif net_type=='gam':
                 theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
                 d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
-            # Replace zeros with ones
-            d[d == 0] = 1
+            # Remove zeros from d
+            d = d[d != 0]
             if np.sum(d)%2!=0:
                 d[int(len(d)*np.random.random())]+=1
             G = nx.configuration_model(d)
