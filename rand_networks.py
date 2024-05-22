@@ -891,39 +891,44 @@ def find_multi_k_binary_search(kavg,epsilon,n,net_type):
 
 
 def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
-    k_avg_graph = 0
+    k_avg_graph,kavg_graph_min,kavg_graph_max = 0,0.0,kavg
     if N>1000:
         while np.abs(kavg-k_avg_graph)/kavg>0.05:
+            kavg_mid = (kavg_graph_max+kavg_graph_min)/2
             if net_type=='ig':
-                wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
+                wald_mu, wald_lambda = kavg_mid, kavg_mid / epsilon ** 2
                 d = numpy.random.default_rng().wald(wald_mu,wald_lambda,N).astype(int)
             elif net_type=='bet':
-                alpha_beta_dist,beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
+                alpha_beta_dist,beta_beta_dist = (N - kavg_mid * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg_mid - N) * (kavg_mid - N + kavg_mid * epsilon ** 2)) / (kavg_mid * N * epsilon ** 2)
                 d=(numpy.random.default_rng().beta(alpha_beta_dist,beta_beta_dist,N)*N).astype(int)
             elif net_type=='ln':
-                mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg ** 2),np.sqrt(2 * np.log(kavg) + np.log((1 + epsilon ** 2) / kavg ** 2))
+                mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg_mid ** 2),np.sqrt(2 * np.log(kavg_mid) + np.log((1 + epsilon ** 2) / kavg_mid ** 2))
                 d = numpy.random.lognormal(mu_log_norm,sigma_log_norm,N).astype(int)
             elif net_type=='gam':
-                theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
+                theta, shape, k_avg_graph = epsilon ** 2 * kavg_mid, 1 / epsilon ** 2, 0.0
                 d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
-            # # Remove zeros from d
-            # d = d[d != 0]
+            # Remove zeros from d
+            d = d[d != 0]
             if np.sum(d)%2!=0:
                 d[int(len(d)*np.random.random())]+=1
             G = nx.configuration_model(d)
             G = nx.Graph(G)
             G.remove_edges_from(nx.selfloop_edges(G))
-            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-            graph_degrees = np.array([G.degree(n) for n in G.nodes()])
-            # Remove nodes with zero degree
-            zero_degree_nodes = [n for n, d in G.degree() if d == 0]
-            G.remove_nodes_from(zero_degree_nodes)
-        return G,graph_degrees
+            graph_degrees= np.array([G.degree(n) for n in G.nodes()])
+            k_avg_graph = np.mean(graph_degrees)
+            if k_avg_graph<kavg:
+                kavg_graph_min = k_avg_graph
+            else:
+                kavg_graph_max = k_avg_graph
+            # # Remove nodes with zero degree
+            # zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+            # G.remove_nodes_from(zero_degree_nodes)
+        return G,np.array([G.degree(n) for n in G.nodes()])
     G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
     graph_degrees = np.array([G.degree(n) for n in G.nodes()])
-    # Remove nodes with zero degree
-    zero_degree_nodes = [n for n, d in G.degree() if d == 0]
-    G.remove_nodes_from(zero_degree_nodes)
+    # # Remove nodes with zero degree
+    # zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+    # G.remove_nodes_from(zero_degree_nodes)
 
     return G,graph_degrees
 
@@ -1058,9 +1063,9 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N,net_type= 10,3.0,10000,'gam'
+    k,epsilon,N,net_type= 20,1.5,10000,'gam'
     # G = configuration_model_undirected_graph_gamma(k,epsilon,N)
-    G = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type)
+    G,degree_sequence = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type)
     plot_gamma_distribution(G,k,epsilon,N,net_type)
     # custom_dist = CustomDistribution()
     # a,k,n=10.0,20,10000

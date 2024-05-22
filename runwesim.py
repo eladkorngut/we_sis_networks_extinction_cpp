@@ -258,7 +258,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
                                    dir_path,prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
             np.save('parameters_{}.npy'.format(i), parameters)
         else:
-            if error_graphs==False:
+            if error_graphs==True:
                 G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog)
                 # graph_degrees = np.array([G.degree(n) for n in G.nodes()])
                 k_avg_graph, graph_std, graph_skewness = np.mean(graph_degrees), np.std(graph_degrees), skew(
@@ -288,26 +288,26 @@ def job_to_cluster(foldername,parameters,Istar,prog):
 
 if __name__ == '__main__':
     # Parameters for the network to work
-    N = 100000 # number of nodes
+    N = 10000 # number of nodes
     lam = 1.3 # The reproduction number
     number_of_networks = 20
     sims = 1000 # Number of simulations at each step
     # k = N # Average number of neighbors for each node
-    k = 10 # Average number of neighbors for each node
+    k = 20 # Average number of neighbors for each node
     x = 0.2 # intial infection percentage
     Num_inf = int(x*N) # Number of initially infected nodes
     it = 70
     jump = 1
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = 3.0,3.0 # The normalized std (second moment divided by the first) of the network
+    eps_din,eps_dout = 1.5,1.5 # The normalized std (second moment divided by the first) of the network
     a = 0.2
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 20
     # tau = 1/(Num_inf*Alpha+N*Beta*k)
-    tau = 0.6
+    tau = 1.0
     new_trajcetory_bin = 2
-    prog = 'gam'
+    prog = 'ig'
     error_graphs = False
     parameters = np.array([N,sims,it,k,x,lam,jump,Num_inf,Alpha,number_of_networks,tau,eps_din,eps_dout,new_trajcetory_bin,prog,Beta_avg,error_graphs])
     # parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,
