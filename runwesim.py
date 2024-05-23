@@ -306,7 +306,7 @@ if __name__ == '__main__':
     jump = 1
     Alpha = 1.0 # Recovery rate
     Beta_avg = Alpha * lam / k # Infection rate for each node
-    eps_din,eps_dout = 1.5,1.5 # The normalized std (second moment divided by the first) of the network
+    eps_din,eps_dout = 3.0,3.0 # The normalized std (second moment divided by the first) of the network
     a = 0.2
     # G = nx.random_regular_graph(k,N) # Creates a random graphs with k number of neighbors
     relaxation_time  = 20
