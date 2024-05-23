@@ -213,6 +213,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             # third_moment = graph_skewness * (graph_std ** 3)
             Beta_graph = float(lam)/k_avg_graph
             Beta = Beta_graph / (1 + eps_graph ** 2)
+            N = len(G)
     if prog == 'bd':
         # G = nx.complete_graph(N)
         d1_in, d1_out, d2_in, d2_out = int(int(k) * (1 - float(eps_din))), int(int(k) * (1 - float(eps_dout))), int(int(k) * (1 + float(eps_din))), int(
@@ -223,9 +224,11 @@ def job_to_cluster(foldername,parameters,Istar,prog):
     for i in range(int(number_of_networks)):
         if prog=='bd':
             G = rand_networks.random_bimodal_directed_graph(int(d1_in), int(d1_out), int(d2_in), int(d2_out), int(N))
+            N = len(G)
             parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])
         elif prog=='h':
             G = nx.random_regular_graph(int(k), int(N))
+            N = len(G)
             parameters = np.array([N,sims,it,k,x,lam,jump,Alpha,Beta_avg,i,tau,Istar,new_trajcetory_bin,dir_path,prog,dir_path,eps_din,eps_dout])            # Creates a random graphs with k number of neighbors
         elif prog == 'pl':
             G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
@@ -241,6 +244,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
                 Beta_graph = float(lam) / k_avg_graph
                 eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
                 Beta = Beta_graph / (1 + eps_graph ** 2)
+                N = len(G)
             parameters = np.array(
                 [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
                  eps_graph, eps_graph, a_graph, b_graph])
@@ -254,6 +258,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
             # third_moment = graph_skewness * (graph_std ** 3)
             Beta_graph = float(lam)/k_avg_graph
             Beta = Beta_graph / (1 + eps_graph ** 2)
+            N = len(G)
             parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,
                                    dir_path,prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
             np.save('parameters_{}.npy'.format(i), parameters)
@@ -265,6 +270,7 @@ def job_to_cluster(foldername,parameters,Istar,prog):
                     graph_degrees)
                 second_moment,third_moment = np.mean((graph_degrees)**2),np.mean((graph_degrees)**3)
                 eps_graph = graph_std / k_avg_graph
+                N = len(G)
                 # third_moment = graph_skewness * (graph_std ** 3)
                 Beta_graph = float(lam)/k_avg_graph
                 Beta = Beta_graph / (1 + eps_graph ** 2)
@@ -289,8 +295,8 @@ def job_to_cluster(foldername,parameters,Istar,prog):
 if __name__ == '__main__':
     # Parameters for the network to work
     N = 10000 # number of nodes
-    lam = 1.3 # The reproduction number
-    number_of_networks = 20
+    lam = 1.05 # The reproduction number
+    number_of_networks = 1
     sims = 1000 # Number of simulations at each step
     # k = N # Average number of neighbors for each node
     k = 20 # Average number of neighbors for each node
