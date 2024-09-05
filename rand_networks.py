@@ -222,6 +222,121 @@ def random_bimodal_graph(d1,d2, n, seed=None):
     return G
 
 
+def random_bimodal_graph_skewed(d1,d2, n, fraction,seed=None):
+    """Return a random bimodal graph of n nodes each with degree d1 and d2.
+        the degree distubition is half for each one of the two degrees
+
+    The resulting graph G has no self-loops or parallel edges.
+
+    Parameters
+    ----------
+    d1 : int
+      Degre
+    d2 : int
+      Degree
+    n : integer
+      Number of nodes. The value of n*d must be even.
+    seed : hashable object
+        The seed for random number generator.
+
+    Notes
+    -----
+    The nodes are numbered form 0 to n-1.
+
+    Kim and Vu's paper [2]_ shows that this algorithm samples in an
+    asymptotically uniform way from the space of random graphs when
+    d = O(n**(1/3-epsilon)).
+
+    References
+    ----------
+    .. [1] A. Steger and N. Wormald,
+       Generating random regular graphs quickly,
+       Probability and Computing 8 (1999), 377-396, 1999.
+       http://citeseer.ist.psu.edu/steger99generating.html
+
+    .. [2] Jeong Han Kim and Van H. Vu,
+       Generating random regular graphs,
+       Proceedings of the thirty-fifth ACM symposium on Theory of computing,
+       San Diego, CA, USA, pp 213--222, 2003.
+       http://portal.acm.org/citation.cfm?id=780542.780576
+
+       The multiplcation of n*d1 and n*d2 needs to be even. For the safe side choose even number for both nodes and degree
+    """
+    if (n * d1) % 2 != 0 or (n * d2) % 2!=0:
+        raise nx.NetworkXError("n * d must be even")
+
+    if not (0 <= d1 < n or 0 <= d2 < n):
+        raise nx.NetworkXError("the 0 <= d < n inequality must be satisfied")
+
+    if d1 == 0 or d2 == 0:
+        return nx.empty_graph(n)
+
+    if seed is not None:
+        random.seed(seed)
+
+    def _suitable(edges, potential_edges):
+    # Helper subroutine to check if there are suitable edges remaining
+    # If False, the generation of the graph has failed
+        if not potential_edges:
+            return True
+        for s1 in potential_edges:
+            for s2 in potential_edges:
+                # Two iterators on the same dictionary are guaranteed
+                # to visit it in the same order if there are no
+                # intervening modifications.
+                if s1 == s2:
+                    # Only need to consider s1-s2 pair one time
+                    break
+                if s1 > s2:
+                    s1, s2 = s2, s1
+                if (s1, s2) not in edges:
+                    return True
+        return False
+
+    def _try_creation(n):
+        # Attempt to create an edge set
+
+        edges = set()
+        stub_d1 = random.sample(list(range(n)),int(n*fraction))
+        stub_d2= [item for item in list(range(n)) if item not in stub_d1]
+        stub_d1=stub_d1 * d1
+        stub_d2=stub_d2 * d2
+        stubs = stub_d1+stub_d2
+
+        while stubs:
+            potential_edges = defaultdict(lambda: 0)
+            random.shuffle(stubs)
+            stubiter = iter(stubs)
+            for s1, s2 in zip(stubiter, stubiter):
+                if s1 > s2:
+                    s1, s2 = s2, s1
+                if s1 != s2 and ((s1, s2) not in edges):
+                    edges.add((s1, s2))
+                else:
+                    potential_edges[s1] += 1
+                    potential_edges[s2] += 1
+
+            if not _suitable(edges, potential_edges):
+                return None # failed to find suitable edge set
+
+            stubs = [node for node, potential in potential_edges.items()
+                     for _ in range(potential)]
+        return edges
+
+    # Even though a suitable edge set exists,
+    # the generation of such a set is not guaranteed.
+    # Try repeatedly to find one.
+    edges = _try_creation(n)
+    while edges is None:
+        edges = _try_creation(n)
+
+    G = nx.Graph()
+    G.name = "random_bimodal_graph(%s, %s)" % (d1, n)
+    G.add_edges_from(edges)
+
+    return G
+
+
 
 def random_bimodal_directed_graph(d1_in,d1_out,d2_in,d2_out, n, seed=None):
     """Return a random bimodal directed graph of n nodes each with degree d1 and d2.
@@ -748,11 +863,11 @@ def plot_gamma_distribution(G,kavg,epsilon,n,net_type):
     possible_degrees = range(0,max(degree_sequence))
     # gamma_theory = (gamma.pdf(possible_degrees, a=1 / epsilon ** 2, scale=epsilon ** 2 * kavg)*n)
     # plt.plot(possible_degrees,gamma_theory,'-b',label='Theory')
-    plt.xscale('log')
-    plt.yscale('log')
+    # plt.xscale('log')
+    # plt.yscale('log')
     plt.xlabel('Degree (k)')
     plt.ylabel('P(k)')
-    plt.title(r'Degree Distribution {} with k={}, $\epsilon$={} and N={}'.format(title,round(np.mean(degree_sequence),2), round(epsilon,2), n))
+    # plt.title(r'Degree Distribution {} with k={}, $\epsilon$={} and N={}'.format(title,round(np.mean(degree_sequence),2), round(epsilon,2), n))
     plt.legend()
     plt.grid(True)
     plt.savefig('degree_dist_graph_{}_k{}_eps_{}_N{}.png'.format(net_type,round(kavg,1),round(epsilon,2),n), dpi=500)
@@ -890,9 +1005,9 @@ def find_multi_k_binary_search(kavg,epsilon,n,net_type):
     return G_mid,(low + high) / 2
 
 
-def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
+def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type,skewness):
     k_avg_graph = 0
-    if N>1000:
+    if N>100:
         while np.abs(kavg-k_avg_graph)/kavg>0.05:
             if net_type=='ig':
                 wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
@@ -906,6 +1021,12 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type):
             elif net_type=='gam':
                 theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
                 d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
+            elif net_type=='bd':
+                d1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
+                d2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
+                fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
+                G = random_bimodal_graph_skewed(d1,d2,N,fraction)
+                return G,np.array([G.degree(n) for n in G.nodes()])
             # # Remove zeros from d
             # d = d[d != 0]
             # Replace zeros with ones
@@ -1064,9 +1185,10 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N,net_type= 20,1.5,10000,'gam'
+    k,epsilon,N,net_type= 20,0.5,1000,'bd'
+    skewness = 0.5
     # G = configuration_model_undirected_graph_gamma(k,epsilon,N)
-    G,degree_sequence = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type)
+    G,degree_sequence = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type,skewness)
     plot_gamma_distribution(G,k,epsilon,N,net_type)
     # custom_dist = CustomDistribution()
     # a,k,n=10.0,20,10000
