@@ -223,19 +223,19 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs):
             largest_eigenvalue,largest_eigen_vector = eigsh(nx.adjacency_matrix(G).astype(float), k=1, which='LA', return_eigenvectors=True)
             Beta = float(lam) / largest_eigenvalue[0]
             graph_correlation = nx.degree_assortativity_coefficient(G)
-            np.save('parameters_{}.npy'.format(i), parameters)
-            np.save('largest_eigen_vector_{}.npy'.format(i), largest_eigen_vector)
-            np.save('largest_eigenvalue_{}.npy'.format(i), largest_eigenvalue[0])
-            infile = 'GNull_{}.pickle'.format(i)
-            with open(infile,'wb') as f:
-                pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
-            export_network_to_csv(G, i)
-            export_parameters_to_csv(parameters,i)
-            path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
-            path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
-            path_parameters = data_path + 'cparameters_{}.txt'.format(i)
-            parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
-            os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
+            # np.save('parameters_{}.npy'.format(i), parameters)
+            # np.save('largest_eigen_vector_{}.npy'.format(i), largest_eigen_vector)
+            # np.save('largest_eigenvalue_{}.npy'.format(i), largest_eigenvalue[0])
+            # infile = 'GNull_{}.pickle'.format(i)
+            # with open(infile,'wb') as f:
+            #     pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
+            # export_network_to_csv(G, i)
+            # export_parameters_to_csv(parameters,i)
+            # path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
+            # path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
+            # path_parameters = data_path + 'cparameters_{}.txt'.format(i)
+            # parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
+            # os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
         if prog == 'pl':
             G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
             k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
@@ -269,17 +269,31 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs):
         #     parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,
         #                            prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
         np.save('parameters_{}.npy'.format(i), parameters)
+        np.save('largest_eigen_vector_{}.npy'.format(i), largest_eigen_vector)
+        np.save('largest_eigenvalue_{}.npy'.format(i), largest_eigenvalue[0])
         infile = 'GNull_{}.pickle'.format(i)
-        with open(infile,'wb') as f:
-            pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
-        # nx.write_gpickle(G, infile)
+        with open(infile, 'wb') as f:
+            pickle.dump(G, f, pickle.HIGHEST_PROTOCOL)
         export_network_to_csv(G, i)
-        export_parameters_to_csv(parameters,i)
+        export_parameters_to_csv(parameters, i)
         path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
         path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
         path_parameters = data_path + 'cparameters_{}.txt'.format(i)
-        parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
-        os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
+        parameters_path = '{} {} {}'.format(path_adj_in, path_adj_out, path_parameters)
+        os.system('{} {} {}'.format(slurm_path, program_path, parameters_path))
+
+        # np.save('parameters_{}.npy'.format(i), parameters)
+        # infile = 'GNull_{}.pickle'.format(i)
+        # with open(infile,'wb') as f:
+        #     pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
+        # # nx.write_gpickle(G, infile)
+        # export_network_to_csv(G, i)
+        # export_parameters_to_csv(parameters,i)
+        # path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
+        # path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
+        # path_parameters = data_path + 'cparameters_{}.txt'.format(i)
+        # parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
+        # os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
 
 
 
