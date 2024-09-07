@@ -158,18 +158,18 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs):
         #         Beta = Beta_graph / (1 + eps_graph ** 2)
         #     parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,
         #                            prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
-        np.save('parameters_{}.npy'.format(i), parameters)
-        infile = 'GNull_{}.pickle'.format(i)
-        with open(infile,'wb') as f:
-            pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
-        # nx.write_gpickle(G, infile)
-        export_network_to_csv(G, i)
-        export_parameters_to_csv(parameters,i)
-        path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
-        path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
-        path_parameters = data_path + 'cparameters_{}.txt'.format(i)
-        parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
-        os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
+        # np.save('parameters_{}.npy'.format(i), parameters)
+        # infile = 'GNull_{}.pickle'.format(i)
+        # with open(infile,'wb') as f:
+        #     pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
+        # # nx.write_gpickle(G, infile)
+        # export_network_to_csv(G, i)
+        # export_parameters_to_csv(parameters,i)
+        # path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
+        # path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
+        # path_parameters = data_path + 'cparameters_{}.txt'.format(i)
+        # parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
+        # os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
 
 
 
@@ -202,9 +202,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Default parameters
-    N = 2000 if args.N is None else args.N
+    N = 5000 if args.N is None else args.N
     prog = 'bd' if args.prog is None else args.prog
-    lam = 1.2 if args.lam is None else args.lam
+    lam = 1.3 if args.lam is None else args.lam
     eps_din = 0.5 if args.eps_din is None else args.eps_din
     eps_dout = 0.5 if args.eps_dout is None else args.eps_dout
     skewness = 0.3 if args.skewness is None else args.skewness
