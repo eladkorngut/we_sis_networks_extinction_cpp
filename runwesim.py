@@ -79,7 +79,7 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,a):
         if not error_graphs and not passed_error:
             G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog,skewness)
             passed_error = True if error_graphs else False
-            k_avg_graph,graph_std,graph_skewness = np.mean(graph_degrees),np.std(graph_degrees),skew(graph_degrees)
+            k_avg_graph,graph_std,graph_skewness,graph_median = np.mean(graph_degrees),np.std(graph_degrees),skew(graph_degrees),np.median(graph_degrees)
             second_moment,third_moment = np.mean((graph_degrees)**2),np.mean((graph_degrees)**3)
             eps_graph = graph_std / k_avg_graph
             N = len(G)
@@ -88,7 +88,7 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,a):
             graph_correlation = nx.degree_assortativity_coefficient(G)
             parameters = np.array(
                 [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, dir_path,
-                 prog, eps_graph, eps_graph, graph_std, graph_skewness, third_moment, second_moment,graph_correlation])
+                 prog, eps_graph, eps_graph, graph_std, graph_skewness, third_moment, second_moment,graph_correlation,graph_median])
         np.save('parameters_{}.npy'.format(i), parameters)
         np.save('largest_eigen_vector_{}.npy'.format(i), largest_eigen_vector)
         np.save('largest_eigenvalue_{}.npy'.format(i), largest_eigenvalue[0])
