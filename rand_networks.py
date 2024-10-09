@@ -914,13 +914,28 @@ def configuration_model_powerlaw(a,b,n):
             return b * a / (1 + b * k) ** (a + 1)
     custom_dist =CustomDistribution()
     sequence = custom_dist.rvs(a=a,b=b,size=n)
+    return sequence
+    # if (np.sum(sequence)%2!=0):
+    #     rand_bin = random.randint(1, n)
+    #     sequence[rand_bin]=sequence[rand_bin]+1
+    # G = nx.configuration_model(sequence)
+    # G = nx.Graph(G)
+    # G.remove_edges_from(nx.selfloop_edges(G))
+    # return G
+
+
+def configuration_model_powerlaw_degree(a,b,n):
+    class CustomDistribution(rv_discrete):
+        def _pmf(self, k, a, b):
+            return b * a / (1 + b * k) ** (a + 1)
+    custom_dist = CustomDistribution()
+    sequence = custom_dist.rvs(a=a,b=b,size=n)
     if (np.sum(sequence)%2!=0):
         rand_bin = random.randint(1, n)
         sequence[rand_bin]=sequence[rand_bin]+1
-    G = nx.configuration_model(sequence)
-    G = nx.Graph(G)
-    G.remove_edges_from(nx.selfloop_edges(G))
     return G
+
+
 
 def configuration_model_undirected_graph(epsilon,avg_degree,N):
     d=np.random.normal(avg_degree, epsilon * avg_degree, N).astype(int)
@@ -1006,7 +1021,8 @@ def find_multi_k_binary_search(kavg,epsilon,n,net_type):
 
 
 def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type,skewness):
-    k_avg_graph = 0
+    k_avg_graph,kavg_graph_max,kavg_graph_min = 0,2*kavg,kavg
+    kavg_mid = (kavg_graph_max+kavg_graph_min)/2
     if N>100:
         while np.abs(kavg-k_avg_graph)/kavg>0.05:
             if net_type=='ig':
@@ -1027,6 +1043,26 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type,skew
                 fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
                 G = random_bimodal_graph_skewed(d1,d2,N,fraction)
                 return G,np.array([G.degree(n) for n in G.nodes()])
+            elif net_type =='pl':
+                a=epsilon
+                if a < 5.0:
+                    a_graph, b_graph = find_b_binary_search(kavg_mid, N, a)
+                    d = configuration_model_powerlaw(a_graph, b_graph, N)
+                else:
+                    a_graph, b_graph = find_a_binary_search(k_avg_graph, N, a)
+                    d = configuration_model_powerlaw(a_graph, b_graph, N)
+
+            elif net_type == 'dg':  # New double Gaussian case
+                # Generate degrees from double Gaussian distribution
+                k1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
+                k2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
+                fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
+                sigma = 5
+                d1 = np.random.normal(k1, sigma, int(N * fraction)).astype(int)
+                d2 = np.random.normal(k2, sigma, N - len(d1)).astype(int)
+                d = np.concatenate([d1, d2])
+
+
             # # Remove zeros from d
             # d = d[d != 0]
             # Replace zeros with ones
@@ -1038,12 +1074,13 @@ def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type,skew
             G.remove_edges_from(nx.selfloop_edges(G))
             graph_degrees= np.array([G.degree(n) for n in G.nodes()])
             k_avg_graph = np.mean(graph_degrees)
-            # if k_avg_graph<kavg:
-            #     kavg_graph_min = k_avg_graph
-            # else:
-            #     kavg_graph_max = k_avg_graph
-            # # Remove nodes with zero degree
-            # zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+            if k_avg_graph<kavg:
+                kavg_graph_min = k_avg_graph
+            else:
+                kavg_graph_max = k_avg_graph
+            kavg_mid = (kavg_graph_min+kavg_graph_max)/2
+            # Remove nodes with zero degree
+            zero_degree_nodes = [n for n, d in G.degree() if d == 0]
             # G.remove_nodes_from(zero_degree_nodes)
         return G,np.array([G.degree(n) for n in G.nodes()])
     G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
@@ -1185,8 +1222,9 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N,net_type= 20,0.5,1000,'bd'
-    skewness = 0.5
+    k,epsilon,N,net_type= 50,0.5,10000,'dg'
+    skewness = -0.5
+    a = epsilon
     # G = configuration_model_undirected_graph_gamma(k,epsilon,N)
     G,degree_sequence = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type,skewness)
     plot_gamma_distribution(G,k,epsilon,N,net_type)
