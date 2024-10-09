@@ -53,4 +53,3 @@ if __name__ == '__main__':
                    f'--new_trajectory_bin {new_trajectory_bin} --relaxation_time {relaxation_time} --x {x} '
                    f'--Alpha {Alpha}')
         os.system(command)
-

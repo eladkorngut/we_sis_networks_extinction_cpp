@@ -60,7 +60,7 @@ def export_network_to_csv(G,netname):
             outgoing_writer.writerow(joint)
 
 
-def job_to_cluster(foldername,parameters,Istar,error_graphs):
+def job_to_cluster(foldername,parameters,Istar,error_graphs,a):
     # This function submit jobs to the cluster with the following program keys:
     # bd: creates a bimodal skewed networks and find its mean time to extinction
     G, graph_degrees= 0,0
@@ -75,37 +75,13 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs):
     N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajcetory_bin, prog, Beta_avg,skewness = \
         int(N), int(sims), int(it), float(k), float(x), float(lam), float(jump), int(Num_inf), float(Alpha), int(number_of_networks),\
         float(tau), float(eps_din), float(eps_dout),int(new_trajcetory_bin), prog, float(Beta_avg), float(skewness)
-    if (prog=='pl'):
-        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin,prog, Beta_avg,error_graphs = parameters
-        N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, a, new_trajcetory_bin, prog, Beta_avg,error_graphs=\
-        int(N), int(sims), int(it), float(k), float(x), float(lam), int(jump), int(Num_inf), float(Alpha), int(number_of_networks), float(tau),\
-        float(a), float(new_trajcetory_bin),prog, float(Beta_avg),bool(error_graphs)
-        a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
-        if error_graphs==False:
-            G, graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k), float(eps_din),int(N), prog,correlation)
-            k_avg_graph, graph_std, graph_skewness = np.mean(graph_degrees), np.std(graph_degrees), skew(graph_degrees)
-            while (np.abs(k_avg_graph - float(k)) / float(k) > 0.05):
-                if a < 5.0:
-                    a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
-                else:
-                    a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
-                G, a_graph, b_graph = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
-                k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-            Beta_graph = float(lam) / k_avg_graph
-            eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
-            Beta = Beta_graph / (1 + eps_graph ** 2)
-    else:
-        for i in range(int(number_of_networks)):
-            if not error_graphs and not passed_error:
-                G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog,skewness)
-                passed_error = True if error_graphs else False
-            # graph_degrees = np.array([G.degree(n) for n in G.nodes()])
+    for i in range(int(number_of_networks)):
+        if not error_graphs and not passed_error:
+            G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog,skewness)
+            passed_error = True if error_graphs else False
             k_avg_graph,graph_std,graph_skewness = np.mean(graph_degrees),np.std(graph_degrees),skew(graph_degrees)
             second_moment,third_moment = np.mean((graph_degrees)**2),np.mean((graph_degrees)**3)
             eps_graph = graph_std / k_avg_graph
-            # third_moment = graph_skewness * (graph_std ** 3)
-            # Beta_graph = float(lam)/k_avg_graph
-            # Beta = Beta_graph / (1 + eps_graph ** 2)
             N = len(G)
             largest_eigenvalue,largest_eigen_vector = eigsh(nx.adjacency_matrix(G).astype(float), k=1, which='LA', return_eigenvectors=True)
             Beta = float(lam) / largest_eigenvalue[0]
@@ -113,64 +89,19 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs):
             parameters = np.array(
                 [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, dir_path,
                  prog, eps_graph, eps_graph, graph_std, graph_skewness, third_moment, second_moment,graph_correlation])
-            np.save('parameters_{}.npy'.format(i), parameters)
-            np.save('largest_eigen_vector_{}.npy'.format(i), largest_eigen_vector)
-            np.save('largest_eigenvalue_{}.npy'.format(i), largest_eigenvalue[0])
-            infile = 'GNull_{}.pickle'.format(i)
-            with open(infile,'wb') as f:
-                pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
-            export_network_to_csv(G, i)
-            export_parameters_to_csv(parameters,i)
-            path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
-            path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
-            path_parameters = data_path + 'cparameters_{}.txt'.format(i)
-            parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
-            os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
-        if prog == 'pl':
-            G = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
-            k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-            while (np.abs(k_avg_graph - float(k)) / float(k) > 0.05):
-                if error_graphs==False:
-                    if a < 5.0:
-                        a_graph, b_graph = rand_networks.find_b_binary_search(float(k), int(N), float(a))
-                    else:
-                        a_graph, b_graph = rand_networks.find_a_binary_search(float(k), int(N), float(a))
-                    G, a_graph, b_graph = rand_networks.configuration_model_powerlaw(a_graph, b_graph, int(N))
-                    k_avg_graph = np.mean([G.degree(n) for n in G.nodes()])
-                Beta_graph = float(lam) / k_avg_graph
-                eps_graph = np.std([G.degree(n) for n in G.nodes()]) / k_avg_graph
-                Beta = Beta_graph / (1 + eps_graph ** 2)
-                N = len(G)
-            parameters = np.array(
-                [N, sims, it, k_avg_graph, x, lam, jump, Alpha, Beta, i, tau, Istar, new_trajcetory_bin, prog, data_path,
-                 eps_graph, eps_graph, a_graph, b_graph])
-        # else:
-        #     if passed_error==False:
-        #         G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog)
-        #         # graph_degrees = np.array([G.degree(n) for n in G.nodes()])
-        #         k_avg_graph, graph_std, graph_skewness = np.mean(graph_degrees), np.std(graph_degrees), skew(
-        #             graph_degrees)
-        #         second_moment,third_moment = np.mean((graph_degrees)**2),np.mean((graph_degrees)**3)
-        #         eps_graph = graph_std / k_avg_graph
-        #         N = len(G)
-        #         # third_moment = graph_skewness * (graph_std ** 3)
-        #         Beta_graph = float(lam)/k_avg_graph
-        #         Beta = Beta_graph / (1 + eps_graph ** 2)
-        #     parameters = np.array([N,sims,it,k_avg_graph,x,lam,jump,Alpha,Beta,i,tau,Istar,new_trajcetory_bin,dir_path,
-        #                            prog,dir_path,eps_graph,eps_graph,graph_std,graph_skewness,third_moment,second_moment])
-        # np.save('parameters_{}.npy'.format(i), parameters)
-        # infile = 'GNull_{}.pickle'.format(i)
-        # with open(infile,'wb') as f:
-        #     pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
-        # # nx.write_gpickle(G, infile)
-        # export_network_to_csv(G, i)
-        # export_parameters_to_csv(parameters,i)
-        # path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
-        # path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
-        # path_parameters = data_path + 'cparameters_{}.txt'.format(i)
-        # parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
-        # os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
-
+        np.save('parameters_{}.npy'.format(i), parameters)
+        np.save('largest_eigen_vector_{}.npy'.format(i), largest_eigen_vector)
+        np.save('largest_eigenvalue_{}.npy'.format(i), largest_eigenvalue[0])
+        infile = 'GNull_{}.pickle'.format(i)
+        with open(infile,'wb') as f:
+            pickle.dump(G,f,pickle.HIGHEST_PROTOCOL)
+        export_network_to_csv(G, i)
+        export_parameters_to_csv(parameters,i)
+        path_adj_in = data_path + 'Adjin_{}.txt'.format(i)
+        path_adj_out = data_path + 'Adjout_{}.txt'.format(i)
+        path_parameters = data_path + 'cparameters_{}.txt'.format(i)
+        parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
+        os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
 
 
 if __name__ == '__main__':
@@ -186,6 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--number_of_networks', type=int, help='Number of networks')
     parser.add_argument('--k', type=int, help='Average number of neighbors for each node')
     parser.add_argument('--error_graphs', action='store_true', help='Flag for error graphs')
+    parser.add_argument('--a', type=float, help='Power-law distrbution first moment')
 
     # Parameters for the WE method
     parser.add_argument('--sims', type=int, help='Number of simulations at each bin')
@@ -202,14 +134,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Default parameters
-    N = 5000 if args.N is None else args.N
-    prog = 'bd' if args.prog is None else args.prog
+    N = 6000 if args.N is None else args.N
+    prog = 'pl' if args.prog is None else args.prog
     lam = 1.3 if args.lam is None else args.lam
     eps_din = 0.5 if args.eps_din is None else args.eps_din
     eps_dout = 0.5 if args.eps_dout is None else args.eps_dout
     skewness = 0.3 if args.skewness is None else args.skewness
     number_of_networks = 1 if args.number_of_networks is None else args.number_of_networks
     k = 50 if args.k is None else args.k
+    a = 0.5 if args.a is None else args.a
     error_graphs = args.error_graphs
 
     sims = 500 if args.sims is None else args.sims
@@ -229,8 +162,7 @@ if __name__ == '__main__':
     parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajectory_bin, prog, Beta_avg, error_graphs, skewness])
     graphname = 'GNull'
     foldername = f'prog_{prog}_N{N}_k_{k}_R_{lam}_tau_{tau}_it_{it}_jump_{jump}_new_trajectory_bin_{new_trajectory_bin}_' \
-                 f'sims_{sims}_net_{number_of_networks}_epsin_{eps_din}_epsout_{eps_dout}_skewness_{skewness}_err_{error_graphs}'
+                 f'sims_{sims}_net_{number_of_networks}_epsin_{eps_din}_epsout_{eps_dout}_skewness_{skewness}_a_{a}_err_{error_graphs}'
     Istar = (1 - 1/lam) * N
 
-    job_to_cluster(foldername, parameters, Istar, error_graphs)
-    # act_as_main(foldername, parameters, Istar, prog)
+    job_to_cluster(foldername, parameters, Istar, error_graphs,a)
