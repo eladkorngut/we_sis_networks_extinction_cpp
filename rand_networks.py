@@ -10,6 +10,8 @@ import matplotlib.cbook as cbook
 from itertools import combinations
 from itertools import zip_longest
 from itertools import chain
+from scipy.stats import skew
+
 
 import numpy.random
 from scipy.stats import norm
@@ -859,7 +861,7 @@ def plot_gamma_distribution(G,kavg,epsilon,n,net_type):
         title='Log-norm'
     degree_sequence = sorted((d for n, d in G.degree()), reverse=True)
     hist, edges = np.histogram(degree_sequence, bins=np.arange(1, np.max(degree_sequence)),density=False)
-    plt.plot(edges[:-1], hist, 'ro', label='Network')
+    plt.plot(edges[:-1], hist, 'ro', label='Network <k>={}'.format(np.mean(degree_sequence)))
     possible_degrees = range(0,max(degree_sequence))
     # gamma_theory = (gamma.pdf(possible_degrees, a=1 / epsilon ** 2, scale=epsilon ** 2 * kavg)*n)
     # plt.plot(possible_degrees,gamma_theory,'-b',label='Theory')
@@ -867,6 +869,7 @@ def plot_gamma_distribution(G,kavg,epsilon,n,net_type):
     # plt.yscale('log')
     plt.xlabel('Degree (k)')
     plt.ylabel('P(k)')
+    plt.title(f'N={len(degree_sequence)}, <k>={round(np.mean(degree_sequence),2)}, Median={np.median(degree_sequence)} skewness={round(skew(degree_sequence),2)} eps={round(np.std(degree_sequence)/np.mean(degree_sequence),2)}')
     # plt.title(r'Degree Distribution {} with k={}, $\epsilon$={} and N={}'.format(title,round(np.mean(degree_sequence),2), round(epsilon,2), n))
     plt.legend()
     plt.grid(True)
@@ -1020,68 +1023,184 @@ def find_multi_k_binary_search(kavg,epsilon,n,net_type):
     return G_mid,(low + high) / 2
 
 
+# def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type,skewness):
+#     k_avg_graph,kavg_graph_max,kavg_graph_min = 0,2*kavg,kavg
+#     kavg_mid = (kavg_graph_max+kavg_graph_min)/2
+#     if N>100:
+#         while np.abs(kavg-k_avg_graph)/kavg>0.05:
+#             if net_type=='ig':
+#                 wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
+#                 d = numpy.random.default_rng().wald(wald_mu,wald_lambda,N).astype(int)
+#             elif net_type=='bet':
+#                 alpha_beta_dist,beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
+#                 d=(numpy.random.default_rng().beta(alpha_beta_dist,beta_beta_dist,N)*N).astype(int)
+#             elif net_type=='ln':
+#                 mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg ** 2),np.sqrt(2 * np.log(kavg) + np.log((1 + epsilon ** 2) / kavg ** 2))
+#                 d = numpy.random.lognormal(mu_log_norm,sigma_log_norm,N).astype(int)
+#             elif net_type=='gam':
+#                 theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
+#                 d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
+#             elif net_type=='bd':
+#                 d1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
+#                 d2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
+#                 fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
+#                 G = random_bimodal_graph_skewed(d1,d2,N,fraction)
+#                 return G,np.array([G.degree(n) for n in G.nodes()])
+#             elif net_type =='pl':
+#                 a=epsilon
+#                 if a < 5.0:
+#                     a_graph, b_graph = find_b_binary_search(kavg_mid, N, a)
+#                     d = configuration_model_powerlaw(a_graph, b_graph, N)
+#                 else:
+#                     a_graph, b_graph = find_a_binary_search(k_avg_graph, N, a)
+#                     d = configuration_model_powerlaw(a_graph, b_graph, N)
+#
+#             elif net_type == 'dg':  # New double Gaussian case
+#                 # Generate degrees from double Gaussian distribution
+#                 k1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
+#                 k2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
+#                 fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
+#                 sigma = 20
+#                 d1 = np.random.normal(k1, sigma, int(N * fraction)).astype(int)
+#                 d2 = np.random.normal(k2, sigma, N - len(d1)).astype(int)
+#                 d = np.concatenate([d1, d2])
+#
+#
+#             # # Remove zeros from d
+#             # d = d[d != 0]
+#             # Replace zeros with ones
+#             d[d == 0] = 1
+#             if np.sum(d)%2!=0:
+#                 d[int(len(d)*np.random.random())]+=1
+#             G = nx.configuration_model(d)
+#             G = nx.Graph(G)
+#             G.remove_edges_from(nx.selfloop_edges(G))
+#             graph_degrees= np.array([G.degree(n) for n in G.nodes()])
+#             k_avg_graph = np.mean(graph_degrees)
+#             if k_avg_graph<kavg:
+#                 kavg_graph_min = k_avg_graph
+#             else:
+#                 kavg_graph_max = k_avg_graph
+#             kavg_mid = (kavg_graph_min+kavg_graph_max)/2
+#             # Remove nodes with zero degree
+#             zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+#             # G.remove_nodes_from(zero_degree_nodes)
+#         return G,np.array([G.degree(n) for n in G.nodes()])
+#     G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
+#     graph_degrees = np.array([G.degree(n) for n in G.nodes()])
+#     # # Remove nodes with zero degree
+#     # zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+#     # G.remove_nodes_from(zero_degree_nodes)
+#
+#     return G,graph_degrees
+
+
 def configuration_model_undirected_graph_mulit_type(kavg,epsilon,N,net_type,skewness):
-    k_avg_graph,kavg_graph_max,kavg_graph_min = 0,2*kavg,kavg
+    eps_avg_graph,eps_graph_max,eps_graph_min = 0,2*epsilon,epsilon
+    eps_mid = (eps_graph_max+eps_graph_min)/2
+    k_avg_graph,kavg_graph_max,kavg_graph_min = 0,2*kavg,0.5*kavg
     kavg_mid = (kavg_graph_max+kavg_graph_min)/2
+    sigma_max,sigma_min = kavg, 2
+    sigma_mid = (sigma_max+sigma_min)/2
+    median_graph,median_final = 0, kavg
     if N>100:
-        while np.abs(kavg-k_avg_graph)/kavg>0.05:
-            if net_type=='ig':
-                wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
-                d = numpy.random.default_rng().wald(wald_mu,wald_lambda,N).astype(int)
-            elif net_type=='bet':
-                alpha_beta_dist,beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
-                d=(numpy.random.default_rng().beta(alpha_beta_dist,beta_beta_dist,N)*N).astype(int)
-            elif net_type=='ln':
-                mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg ** 2),np.sqrt(2 * np.log(kavg) + np.log((1 + epsilon ** 2) / kavg ** 2))
-                d = numpy.random.lognormal(mu_log_norm,sigma_log_norm,N).astype(int)
-            elif net_type=='gam':
-                theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
-                d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
-            elif net_type=='bd':
-                d1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
-                d2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
-                fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
-                G = random_bimodal_graph_skewed(d1,d2,N,fraction)
-                return G,np.array([G.degree(n) for n in G.nodes()])
-            elif net_type =='pl':
-                a=epsilon
-                if a < 5.0:
-                    a_graph, b_graph = find_b_binary_search(kavg_mid, N, a)
-                    d = configuration_model_powerlaw(a_graph, b_graph, N)
+        while np.abs(median_graph-median_final)/median_final>0.05:
+
+            while np.abs(epsilon-eps_avg_graph)/epsilon>0.05:
+                if net_type=='ig':
+                    wald_mu, wald_lambda = kavg, kavg / epsilon ** 2
+                    d = numpy.random.default_rng().wald(wald_mu,wald_lambda,N).astype(int)
+                elif net_type=='bet':
+                    alpha_beta_dist,beta_beta_dist = (N - kavg * (1 + epsilon ** 2)) / (N * epsilon ** 2),((kavg - N) * (kavg - N + kavg * epsilon ** 2)) / (kavg * N * epsilon ** 2)
+                    d=(numpy.random.default_rng().beta(alpha_beta_dist,beta_beta_dist,N)*N).astype(int)
+                elif net_type=='ln':
+                    mu_log_norm,sigma_log_norm = -(1 / 2) * np.log((1 + epsilon ** 2) / kavg ** 2),np.sqrt(2 * np.log(kavg) + np.log((1 + epsilon ** 2) / kavg ** 2))
+                    d = numpy.random.lognormal(mu_log_norm,sigma_log_norm,N).astype(int)
+                elif net_type=='gam':
+                    theta, shape, k_avg_graph = epsilon ** 2 * kavg, 1 / epsilon ** 2, 0.0
+                    d = numpy.random.default_rng().gamma(shape, theta, N).astype(int)
+                elif net_type=='bd':
+                    d1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
+                    d2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
+                    fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
+                    G = random_bimodal_graph_skewed(d1,d2,N,fraction)
+                    return G,np.array([G.degree(n) for n in G.nodes()])
+                elif net_type =='pl':
+                    a=epsilon
+                    if a < 5.0:
+                        a_graph, b_graph = find_b_binary_search(kavg_mid, N, a)
+                        d = configuration_model_powerlaw(a_graph, b_graph, N)
+                    else:
+                        a_graph, b_graph = find_a_binary_search(k_avg_graph, N, a)
+                        d = configuration_model_powerlaw(a_graph, b_graph, N)
+
+                # elif net_type == 'dg':  # New double Gaussian case
+                #     # Generate degrees from double Gaussian distribution
+                #     k1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
+                #     k2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
+                #     fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
+                #     d1 = np.random.normal(k1, sigma, int(N * fraction)).astype(int)
+                #     d2 = np.random.normal(k2, sigma, N - len(d1)).astype(int)
+                #     d = np.concatenate([d1, d2])
+                elif net_type == 'dg':  # New double Gaussian case
+                    # Set means and fraction for double Gaussian distribution
+                    k1 = int((1 / 2) * (2 + skewness * epsilon - np.sqrt(4 + skewness ** 2) * epsilon) * kavg_mid)
+                    k2 = int(kavg + ((skewness + np.sqrt(4 + skewness ** 2)) * epsilon * kavg_mid) / 2)
+                    fraction = (1 + skewness / np.sqrt(4 + skewness ** 2)) / 2
+
+                    # Generate degrees from first Gaussian
+                    d1 = np.random.normal(k1, sigma_mid, int(N * fraction)).astype(int)
+
+                    # Identify cutoff based on d1 to replicate in d2
+                    non_zero_d1 = d1[d1 > 0]
+                    if len(non_zero_d1) > 0:
+                        cutoff_d1 = min(non_zero_d1)
+                    else:
+                        cutoff_d1 = 1  # Fallback if all d1 values are zero or less, unlikely with large N
+
+                    # Generate degrees from second Gaussian with cutoff equivalent to d1's malformation
+                    d2 = np.random.normal(k2, sigma_mid, N - len(d1)).astype(int)
+                    d2 = d2[d2 >= k2 - (k1 - cutoff_d1)]  # Apply cutoff equivalent to the offset in d1
+
+                    # Ensure enough samples are present in d2, regenerate if needed
+                    while len(d2) < N - len(d1):
+                        additional_d2 = np.random.normal(k2, sigma_mid, (N - len(d1)) - len(d2)).astype(int)
+                        additional_d2 = additional_d2[additional_d2 >= k2 - (k1 - cutoff_d1)]
+                        d2 = np.concatenate([d2, additional_d2])
+
+                    # Combine the two Gaussian distributions
+                    d = np.concatenate([d1, d2])
+
+                # # Remove zeros from d
+                # d = d[d != 0]
+                # Replace zeros with ones
+                d[d == 0] = 1
+                if np.sum(d)%2!=0:
+                    d[int(len(d)*np.random.random())]+=1
+                G = nx.configuration_model(d)
+                G = nx.Graph(G)
+                G.remove_edges_from(nx.selfloop_edges(G))
+                graph_degrees= np.array([G.degree(n) for n in G.nodes()])
+                eps_avg_graph = np.std(graph_degrees)/np.mean(graph_degrees)
+                if eps_avg_graph>epsilon:
+                    kavg_graph_min = np.mean(graph_degrees)
                 else:
-                    a_graph, b_graph = find_a_binary_search(k_avg_graph, N, a)
-                    d = configuration_model_powerlaw(a_graph, b_graph, N)
-
-            elif net_type == 'dg':  # New double Gaussian case
-                # Generate degrees from double Gaussian distribution
-                k1 = int((1 / 2)*(2 + skewness*epsilon - np.sqrt(4 + skewness ** 2)*epsilon)*kavg)
-                k2 = int(kavg +  ((skewness + np.sqrt(4 + skewness**2))*epsilon*kavg)/2)
-                fraction = (1 + skewness/np.sqrt(4 + skewness**2))/2
-                sigma = 5
-                d1 = np.random.normal(k1, sigma, int(N * fraction)).astype(int)
-                d2 = np.random.normal(k2, sigma, N - len(d1)).astype(int)
-                d = np.concatenate([d1, d2])
-
-
-            # # Remove zeros from d
-            # d = d[d != 0]
-            # Replace zeros with ones
-            d[d == 0] = 1
-            if np.sum(d)%2!=0:
-                d[int(len(d)*np.random.random())]+=1
-            G = nx.configuration_model(d)
-            G = nx.Graph(G)
-            G.remove_edges_from(nx.selfloop_edges(G))
-            graph_degrees= np.array([G.degree(n) for n in G.nodes()])
-            k_avg_graph = np.mean(graph_degrees)
-            if k_avg_graph<kavg:
-                kavg_graph_min = k_avg_graph
+                    kavg_graph_max = np.mean(graph_degrees)
+                kavg_mid = (kavg_graph_max + kavg_graph_min) / 2
+                # Remove nodes with zero degreel
+                # zero_degree_nodes = [n for n, d in G.degree() if d == 0]
+                # G.remove_nodes_from(zero_degree_nodes)
+            graph_degrees = np.array([G.degree(n) for n in G.nodes()])
+            median_graph = np.median(graph_degrees)
+            if median_graph < median_final:
+                sigma_min = sigma_mid
             else:
-                kavg_graph_max = k_avg_graph
-            kavg_mid = (kavg_graph_min+kavg_graph_max)/2
-            # Remove nodes with zero degree
-            zero_degree_nodes = [n for n, d in G.degree() if d == 0]
-            # G.remove_nodes_from(zero_degree_nodes)
+                sigma_max = sigma_mid
+            sigma_mid = (sigma_min + sigma_max) / 2
+            eps_avg_graph, eps_graph_max, eps_graph_min = 0, 2 * epsilon, epsilon
+            eps_mid = (eps_graph_max + eps_graph_min) / 2
+            k_avg_graph, kavg_graph_max, kavg_graph_min = 0, 2 * kavg, 0.5 * kavg
+            kavg_mid = (kavg_graph_max + kavg_graph_min) / 2
         return G,np.array([G.degree(n) for n in G.nodes()])
     G,kavg_graph = find_multi_k_binary_search(kavg,epsilon,N,net_type)
     graph_degrees = np.array([G.degree(n) for n in G.nodes()])
@@ -1222,12 +1341,13 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N,net_type= 50,0.5,10000,'dg'
-    skewness = -0.5
+    k,epsilon,N,net_type= 50,0.6,10000,'dg'
+    skewness = 0.99
     a = epsilon
     # G = configuration_model_undirected_graph_gamma(k,epsilon,N)
     G,degree_sequence = configuration_model_undirected_graph_mulit_type(k,epsilon,N,net_type,skewness)
     plot_gamma_distribution(G,k,epsilon,N,net_type)
+    print(np.median(degree_sequence))
     # custom_dist = CustomDistribution()
     # a,k,n=10.0,20,10000
     # b=1/(k*(a-1))
