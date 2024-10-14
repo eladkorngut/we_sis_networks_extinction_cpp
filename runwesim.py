@@ -60,7 +60,7 @@ def export_network_to_csv(G,netname):
             outgoing_writer.writerow(joint)
 
 
-def job_to_cluster(foldername,parameters,Istar,error_graphs,a):
+def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const):
     # This function submit jobs to the cluster with the following program keys:
     # bd: creates a bimodal skewed networks and find its mean time to extinction
     G, graph_degrees= 0,0
@@ -77,7 +77,12 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,a):
         float(tau), float(eps_din), float(eps_dout),int(new_trajcetory_bin), prog, float(Beta_avg), float(skewness)
     for i in range(int(number_of_networks)):
         if not error_graphs and not passed_error:
-            G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog,skewness)
+            if eps_const:
+                G, graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type_eps_const(float(k),
+                                                                                                 float(eps_din), int(N),
+                                                                                                 prog, skewness)
+            else:
+                G,graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k),float(eps_din),int(N),prog,skewness)
             passed_error = True if error_graphs else False
             k_avg_graph,graph_std,graph_skewness,graph_median = np.mean(graph_degrees),np.std(graph_degrees),skew(graph_degrees),np.median(graph_degrees)
             second_moment,third_moment = np.mean((graph_degrees)**2),np.mean((graph_degrees)**3)
@@ -119,6 +124,8 @@ if __name__ == '__main__':
     parser.add_argument('--error_graphs', action='store_true', help='Flag for error graphs')
     parser.add_argument('--a', type=float, help='Power-law distrbution first moment')
 
+    parser.add_argument('--eps_const', action='store_true', help='Flag for const epsilon')
+
     # Parameters for the WE method
     parser.add_argument('--sims', type=int, help='Number of simulations at each bin')
     parser.add_argument('--tau', type=float, help='Tau parameter')
@@ -144,6 +151,7 @@ if __name__ == '__main__':
     k = 50 if args.k is None else args.k
     a = 0.5 if args.a is None else args.a
     error_graphs = args.error_graphs
+    eps_const = False
 
     sims = 500 if args.sims is None else args.sims
     tau = 1.0 if args.tau is None else args.tau
@@ -162,7 +170,7 @@ if __name__ == '__main__':
     parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajectory_bin, prog, Beta_avg, error_graphs, skewness])
     graphname = 'GNull'
     foldername = f'prog_{prog}_N{N}_k_{k}_R_{lam}_tau_{tau}_it_{it}_jump_{jump}_new_trajectory_bin_{new_trajectory_bin}_' \
-                 f'sims_{sims}_net_{number_of_networks}_epsin_{eps_din}_epsout_{eps_dout}_skewness_{skewness}_a_{a}_err_{error_graphs}'
+                 f'sims_{sims}_net_{number_of_networks}_epsin_{eps_din}_epsout_{eps_dout}_skewness_{skewness}_err_{error_graphs}'
     Istar = (1 - 1/lam) * N
 
-    job_to_cluster(foldername, parameters, Istar, error_graphs,a)
+    job_to_cluster(foldername, parameters, Istar, error_graphs,eps_const)
