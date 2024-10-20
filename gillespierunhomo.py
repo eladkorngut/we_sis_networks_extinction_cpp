@@ -553,7 +553,9 @@ def fluctuation_run_extinction_undirected_graph(Alpha,bank,outfile,infile,runs,N
 
 
 def fluctuation_run_extinction_DiGraph(Alpha,bank,outfile,infile,runs,Num_inf,network_number,Beta):
-    G = nx.read_gpickle(infile)
+    # G = nx.read_gpickle(infile)
+    with open(infile, 'rb') as f:
+        G = pickle.load(f)
     seed_nodes = Num_inf
     for run_loop_counter in range(runs):
         Total_time = 0.0
