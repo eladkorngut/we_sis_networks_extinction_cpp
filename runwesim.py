@@ -7,6 +7,8 @@ import networkx as nx
 from scipy.stats import skew
 import argparse
 from scipy.sparse.linalg import eigsh
+import netinithomo
+
 
 def export_parameters_to_csv(parameters,network_number):
     name_parameters = 'cparameters_{}.txt'.format(network_number)
@@ -60,7 +62,7 @@ def export_network_to_csv(G,netname):
             outgoing_writer.writerow(joint)
 
 
-def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const):
+def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const,run_mc_simulation):
     # This function submit jobs to the cluster with the following program keys:
     # bd: creates a bimodal skewed networks and find its mean time to extinction
     G, graph_degrees= 0,0
@@ -108,6 +110,21 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const):
         parameters_path ='{} {} {}'.format(path_adj_in,path_adj_out,path_parameters)
         os.system('{} {} {}'.format(slurm_path,program_path,parameters_path))
 
+        if run_mc_simulation==True:
+            # Convert the undirected graph to a directed graph with bidirectional edges
+            G = G.to_directed()
+            G = netinithomo.set_graph_attriubute_DiGraph(G)
+            with open(infile, 'wb') as f:
+                pickle.dump(G, f, pickle.HIGHEST_PROTOCOL)
+            prog_mc = 'bd'
+            bank,Num_inital_conditions = 1000000,100
+            start_recording_time,Time_limit = 50,1000
+            Alpha, bank, outfile, infile, runs, Num_inf, network_number, Beta, start_recording_time, Time_limit
+            outfile ='mc_N_{}_eps_{}_R_{}'.format(N,eps_din,lam)
+            os.system(dir_path + '/slurm.serjob python3 ' + dir_path + '/gillespierunhomo.py ' + str(prog_mc) + ' ' +
+                      str(Alpha) + ' ' + str(bank) + ' ' + str(outfile) + ' ' + str(infile) + ' ' + str(
+                Num_inital_conditions) + ' ' + str(Num_inf) + ' ' + str(i) + ' ' + str(Beta)+ ' ' + str(start_recording_time))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process network and WE method parameters.")
@@ -141,19 +158,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Default parameters
-    N = 6000 if args.N is None else args.N
-    prog = 'pl' if args.prog is None else args.prog
+    N = 10000 if args.N is None else args.N
+    prog = 'gam' if args.prog is None else args.prog
     lam = 1.3 if args.lam is None else args.lam
-    eps_din = 0.5 if args.eps_din is None else args.eps_din
-    eps_dout = 0.5 if args.eps_dout is None else args.eps_dout
-    skewness = 0.3 if args.skewness is None else args.skewness
-    number_of_networks = 1 if args.number_of_networks is None else args.number_of_networks
-    k = 50 if args.k is None else args.k
+    eps_din = 1.5 if args.eps_din is None else args.eps_din
+    eps_dout = 1.5 if args.eps_dout is None else args.eps_dout
+    skewness = 0.0 if args.skewness is None else args.skewness
+    number_of_networks = 2 if args.number_of_networks is None else args.number_of_networks
+    k = 20 if args.k is None else args.k
     a = 0.5 if args.a is None else args.a
     error_graphs = args.error_graphs
     eps_const = False
 
-    sims = 500 if args.sims is None else args.sims
+    sims = 1000 if args.sims is None else args.sims
     tau = 1.0 if args.tau is None else args.tau
     it = 70 if args.it is None else args.it
     jump = 1 if args.jump is None else args.jump
@@ -164,7 +181,7 @@ if __name__ == '__main__':
     Num_inf = int(x * N)
     Alpha = 1.0 if args.Alpha is None else args.Alpha
     Beta_avg = Alpha * lam / k
-    # run_mc_simulationtion = True
+    run_mc_simulationtion = True
 
 
     parameters = np.array([N, sims, it, k, x, lam, jump, Num_inf, Alpha, number_of_networks, tau, eps_din, eps_dout, new_trajectory_bin, prog, Beta_avg, error_graphs, skewness])
@@ -173,4 +190,4 @@ if __name__ == '__main__':
                  f'sims_{sims}_net_{number_of_networks}_epsin_{eps_din}_epsout_{eps_dout}_skewness_{skewness}_err_{error_graphs}'
     Istar = (1 - 1/lam) * N
 
-    job_to_cluster(foldername, parameters, Istar, error_graphs,eps_const)
+    job_to_cluster(foldername, parameters, Istar, error_graphs,eps_const,run_mc_simulationtion)
