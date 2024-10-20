@@ -119,7 +119,6 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const,run_mc_sim
             prog_mc = 'bd'
             bank,Num_inital_conditions = 1000000,100
             start_recording_time,Time_limit = 50,1000
-            Alpha, bank, outfile, infile, runs, Num_inf, network_number, Beta, start_recording_time, Time_limit
             outfile ='mc_N_{}_eps_{}_R_{}'.format(N,eps_din,lam)
             os.system(dir_path + '/slurm.serjob python3 ' + dir_path + '/gillespierunhomo.py ' + str(prog_mc) + ' ' +
                       str(Alpha) + ' ' + str(bank) + ' ' + str(outfile) + ' ' + str(infile) + ' ' + str(
