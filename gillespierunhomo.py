@@ -619,7 +619,7 @@ def fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,runs,Num
     G = nx.read_gpickle(infile)
     seed_nodes = Num_inf
     for run_loop_counter in range(runs):
-        T,I,I_type_above_avg,I_type_below_avg,runs_csv=[],[],[],[],[]
+        T,I,runs_csv=[],[],[]
         runs_csv.append(run_loop_counter)
         Total_time = 0.0
         T.append(Total_time)
@@ -633,15 +633,15 @@ def fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,runs,Num
         I.append(Num_inf)
         net_num.append(network_number)
 
-        num_inf_above_avg, num_inf_below_avg = 0, 0
-        for node_type_number in range(G.number_of_nodes()):
-            if G.nodes[node_type_number]['infected'] == True:
-                if G.nodes[node_type_number]['contact_rate'] > 1.0:
-                    num_inf_above_avg = num_inf_above_avg + 1
-                else:
-                    num_inf_below_avg = num_inf_below_avg + 1
-        I_type_above_avg.append(num_inf_above_avg)
-        I_type_below_avg.append(num_inf_below_avg)
+        # num_inf_above_avg, num_inf_below_avg = 0, 0
+        # for node_type_number in range(G.number_of_nodes()):
+        #     if G.nodes[node_type_number]['infected'] == True:
+        #         if G.nodes[node_type_number]['contact_rate'] > 1.0:
+        #             num_inf_above_avg = num_inf_above_avg + 1
+        #         else:
+        #             num_inf_below_avg = num_inf_below_avg + 1
+        # I_type_above_avg.append(num_inf_above_avg)
+        # I_type_below_avg.append(num_inf_below_avg)
 
 
         ######################
@@ -693,16 +693,16 @@ def fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,runs,Num
                 net_num.append(network_number)
                 runs_csv.append(run_loop_counter)
                 num_inf_above_avg, num_inf_below_avg = 0, 0
-                for node_type_number in range(G.number_of_nodes()):
-                    if G.nodes[node_type_number]['infected'] == True:
-                        if G.nodes[node_type_number]['contact_rate'] > 1.0:
-                            num_inf_above_avg = num_inf_above_avg + 1
-                        else:
-                            num_inf_below_avg = num_inf_below_avg + 1
-                I_type_above_avg.append(num_inf_above_avg)
-                I_type_below_avg.append(num_inf_below_avg)
+                # for node_type_number in range(G.number_of_nodes()):
+                #     if G.nodes[node_type_number]['infected'] == True:
+                #         if G.nodes[node_type_number]['contact_rate'] > 1.0:
+                #             num_inf_above_avg = num_inf_above_avg + 1
+                #         else:
+                #             num_inf_below_avg = num_inf_below_avg + 1
+                # I_type_above_avg.append(num_inf_above_avg)
+                # I_type_below_avg.append(num_inf_below_avg)
         f = open(outfile + '.csv', "a+")
-        l = [T, I, I_type_above_avg, I_type_below_avg, runs_csv, net_num]
+        l = [T, I, runs_csv, net_num]
         np.save(f'num_infected_netnum_{network_number}', I)
         np.save(f'all_data_netnum_{network_number}', l)
         l = zip(*l)

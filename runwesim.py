@@ -118,11 +118,11 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const,run_mc_sim
                 pickle.dump(G, f, pickle.HIGHEST_PROTOCOL)
             prog_mc = 'bd'
             bank,Num_inital_conditions = 1000000,100
-            start_recording_time,Time_limit = 50,1000
+            Time_limit = 1000
             outfile ='mc_N_{}_eps_{}_R_{}'.format(N,eps_din,lam)
             os.system(dir_path + '/slurm.serjob python3 ' + dir_path + '/gillespierunhomo.py ' + str(prog_mc) + ' ' +
                       str(Alpha) + ' ' + str(bank) + ' ' + str(outfile) + ' ' + str(infile) + ' ' + str(
-                Num_inital_conditions) + ' ' + str(Num_inf) + ' ' + str(i) + ' ' + str(Beta)+ ' ' + str(start_recording_time))
+                Num_inital_conditions) + ' ' + str(Num_inf) + ' ' + str(i) + ' ' + str(Beta)+ ' ' + str(Time_limit))
 
 
 if __name__ == '__main__':
