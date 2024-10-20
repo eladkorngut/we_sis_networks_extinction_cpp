@@ -692,7 +692,7 @@ def fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,runs,Num
                 T.append(Total_time)
                 net_num.append(network_number)
                 runs_csv.append(run_loop_counter)
-                num_inf_above_avg, num_inf_below_avg = 0, 0
+                # num_inf_above_avg, num_inf_below_avg = 0, 0
                 # for node_type_number in range(G.number_of_nodes()):
                 #     if G.nodes[node_type_number]['infected'] == True:
                 #         if G.nodes[node_type_number]['contact_rate'] > 1.0:
@@ -1337,7 +1337,9 @@ def actasmain():
     #                                           Beta)
     # fluctuation_weighted_run_infected_no_decay(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,Start_recording_time,Time_limit)
     # fluctuation_run_autocorrelation_hetro_rates(Alpha,Time_limit,bank,outfile,infile,Num_inital_conditions,Num_inf,auto_correlation_time_diff,Beta,Start_recording_time)
-    run_markov_chain_bimodal_network(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,Start_recording_time,Time_limit,dt_discrite)
+    fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,start_recording_time,Time_limit)
+
+    # run_markov_chain_bimodal_network(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,Start_recording_time,Time_limit,dt_discrite)
     # markov_extinction_bimodal_network(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta)
     # nx.write_gpickle(G, graphname)
     # infile = graphname + '_' + str(epsilon).replace('.', '') + '_' + str(n)+'.pickle'
