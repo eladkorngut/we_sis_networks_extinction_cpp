@@ -616,7 +616,8 @@ def fluctuation_run_extinction_DiGraph(Alpha,bank,outfile,infile,runs,Num_inf,ne
 
 
 def fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,runs,Num_inf,network_number,Beta,start_recording_time,Time_limit):
-    G = nx.read_gpickle(infile)
+    with open(infile, 'rb') as f:
+        G = pickle.load(f)
     seed_nodes = Num_inf
     for run_loop_counter in range(runs):
         T,I,runs_csv=[],[],[]
@@ -1253,19 +1254,19 @@ def actasmain():
     Epsilon_sus = [0.0]
     Epsilon_inf = [0.0]
     Epsilon=[0.0]
-    N = 500
-    k = 200
+    N = 10000
+    k = 50
     x = 0.2
-    eps_din,eps_dout = 0.0,0.0
+    eps_din,eps_dout = 1.5,1.5
     eps_sus,eps_lam = 0.0,0.0
     Num_inf = int(x * N)
     Alpha = 1.0
     susceptibility = 'bimodal'
     infectability = 'bimodal'
     directed_model='gauss_c'
-    prog = 'q' #can be either 'i' for the inatilization and reaching eq state or 'r' for running and recording fluc
-    Lam = 1.5
-    Time_limit = 200
+    prog = 'gam' #can be either 'i' for the inatilization and reaching eq state or 'r' for running and recording fluc
+    Lam = 1.3
+    Time_limit = 60
     Start_recording_time = 0.0
     Beta_avg =Alpha* Lam / k
     Num_different_networks= 1
@@ -1297,8 +1298,11 @@ def actasmain():
     # G = netinithomo.intalize_lam_graph(G, N, beta_sus, beta_inf)
     d1_in, d1_out, d2_in, d2_out = int(k * (1 - eps_din)), int(k * (1 - eps_dout)), int(k * (1 + eps_din)), int(
         k * (1 + eps_dout))
-    G = rand_networks.random_bimodal_directed_graph(d1_in, d1_out, d2_in, d2_out, N)
-    G = netinithomo.set_graph_attriubute_markov(G)
+    skewness = 0.0
+    G, graph_degrees = rand_networks.configuration_model_undirected_graph_mulit_type(float(k), float(eps_din), int(N),prog, skewness)
+    # G = rand_networks.random_bimodal_directed_graph(d1_in, d1_out, d2_in, d2_out, N)
+    # G = netinithomo.set_graph_attriubute_markov(G)
+
     # G = netinithomo.set_graph_attriubute_DiGraph(G)
 
     # choose_beta = lambda net_dist, avg, epsilon: np.random.normal(avg, epsilon * avg, N) \
@@ -1337,6 +1341,8 @@ def actasmain():
     #                                           Beta)
     # fluctuation_weighted_run_infected_no_decay(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,Start_recording_time,Time_limit)
     # fluctuation_run_autocorrelation_hetro_rates(Alpha,Time_limit,bank,outfile,infile,Num_inital_conditions,Num_inf,auto_correlation_time_diff,Beta,Start_recording_time)
+    start_recording_time = 50
+    skewness=0.0
     fluctuation_run_extinction_DiGraph_record(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,start_recording_time,Time_limit)
 
     # run_markov_chain_bimodal_network(Alpha,bank,outfile,infile,Num_inital_conditions,Num_inf,n,Beta,Start_recording_time,Time_limit,dt_discrite)

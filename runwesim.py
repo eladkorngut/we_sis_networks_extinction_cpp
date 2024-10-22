@@ -116,9 +116,9 @@ def job_to_cluster(foldername,parameters,Istar,error_graphs,eps_const,run_mc_sim
             G = netinithomo.set_graph_attriubute_DiGraph(G)
             with open(infile, 'wb') as f:
                 pickle.dump(G, f, pickle.HIGHEST_PROTOCOL)
-            prog_mc = 'bd'
+            prog_mc = 'gam'
             bank,Num_inital_conditions = 1000000,1
-            Time_limit,start_recording_time = 10000,50
+            Time_limit,start_recording_time = 60,50
             outfile ='mc_N_{}_eps_{}_R_{}'.format(N,eps_din,lam)
             os.system(dir_path + '/slurm.serjob python3 ' + dir_path + '/gillespierunhomo.py ' + str(prog_mc) + ' ' +
                       str(Alpha) + ' ' + str(bank) + ' ' + str(outfile) + ' ' + str(infile) + ' ' + str(
