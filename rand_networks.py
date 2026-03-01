@@ -1341,7 +1341,7 @@ if __name__ == '__main__':
     # class CustomDistribution(rv_discrete):
     #     def _pmf(self, k, a, b):
     #         return b * a / (1 + b * k) ** (a + 1)
-    k,epsilon,N,net_type= 50,0.6,10000,'dg'
+    k,epsilon,N,net_type= 50,0.6,300,'dg'
     skewness = 0.3
     a = epsilon
     # G = configuration_model_undirected_graph_gamma(k,epsilon,N)

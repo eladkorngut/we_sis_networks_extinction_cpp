@@ -157,20 +157,20 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Default parameters
-    N = 10000 if args.N is None else args.N
-    prog = 'gam' if args.prog is None else args.prog
+    N = 10680 if args.N is None else args.N
+    prog = 'pgp' if args.prog is None else args.prog
     lam = 1.3 if args.lam is None else args.lam
-    eps_din = 1.5 if args.eps_din is None else args.eps_din
-    eps_dout = 1.5 if args.eps_dout is None else args.eps_dout
+    eps_din = 0.1 if args.eps_din is None else args.eps_din
+    eps_dout = 0.1 if args.eps_dout is None else args.eps_dout
     skewness = 0.0 if args.skewness is None else args.skewness
-    number_of_networks = 2 if args.number_of_networks is None else args.number_of_networks
-    k = 20 if args.k is None else args.k
+    number_of_networks = 4 if args.number_of_networks is None else args.number_of_networks
+    k = 50 if args.k is None else args.k
     a = 0.5 if args.a is None else args.a
     error_graphs = args.error_graphs
     eps_const = False
 
-    sims = 1000 if args.sims is None else args.sims
-    tau = 1.0 if args.tau is None else args.tau
+    sims = 500 if args.sims is None else args.sims
+    tau = 0.5 if args.tau is None else args.tau
     it = 70 if args.it is None else args.it
     jump = 1 if args.jump is None else args.jump
     new_trajectory_bin = 2 if args.new_trajectory_bin is None else args.new_trajectory_bin
