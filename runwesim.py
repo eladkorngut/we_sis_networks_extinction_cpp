@@ -159,7 +159,7 @@ if __name__ == '__main__':
     # Default parameters
     N = 10680 if args.N is None else args.N
     prog = 'pgp' if args.prog is None else args.prog
-    lam = 1.3 if args.lam is None else args.lam
+    lam = 1.2 if args.lam is None else args.lam
     eps_din = 0.1 if args.eps_din is None else args.eps_din
     eps_dout = 0.1 if args.eps_dout is None else args.eps_dout
     skewness = 0.0 if args.skewness is None else args.skewness
